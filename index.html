@@ -352,7 +352,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
           <option value="CB">CB</option>
           <option value="Chorus Pro">Chorus Pro</option>
           <option value="ANCV">ANCV (chèques-vacances)</option>
-          <option value="Pass'Sport">Pass'Sport</option>
+          <option value="Pass sport">Pass sport</option>
         </select>
       </div>
       <div class="field"><label>STATUT</label>
@@ -782,7 +782,7 @@ function updateTarif(){
   info.innerHTML=badge+` Tarif annuel : <strong>${m} €</strong> · Adhésion : <strong>${ADH} €</strong> &nbsp;→&nbsp; 3 trimestres : <strong>${t1} €</strong> · <strong>${t2} €</strong> · <strong>${t3} €</strong> <span style="color:var(--text2)">(1er versement = ${t1} € + ${ADH} € d'adhésion = ${t1+ADH} €)</span>`
     +`<br>Total à régler : <strong style="color:var(--navy)">${m+ADH} €</strong>`;
 }
-function estAide(m){return m==='ANCV'||m==="Pass'Sport";}
+function estAide(m){return m==='ANCV'||m==='Pass sport'||m==="Pass'Sport";}
 function toggleChequeBlock(){
   const mode=document.getElementById('f_mode').value;
   const aide=estAide(mode);
