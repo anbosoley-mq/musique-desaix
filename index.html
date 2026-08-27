@@ -603,7 +603,7 @@ Saison {{SAISON_LABEL}}</textarea></div>
 // Tarifs annuels 2026-2027 : un tarif unique par discipline, identique enfant et adulte.
 // L'adhesion de 25 EUR s'ajoute en sus (constante ADH dans updateTarif).
 const TARIFS={GUITARE:500,PIANO:500,CHANT:400,PERCUSSIONS:300};
-const BANQUES=["Martinique","Crédit Agricole","BNP Paribas","Société Générale","La Banque Postale","Caisse d'Épargne","Crédit Mutuel","BRED","LCL","Autre"];
+const BANQUES=["Autre", "Accord", "Allianz", "AXA", "BFCAG", "BFM", "BFOR Bank", "BNP", "Boursorama", "BoursoBank", "Bqe Atlantique", "Bqe BCP", "Bqe Chalus", "Bqe de Savoie", "Bqe des Antilles", "Bqe des Caraïbes", "Bqe Dupuy de Perceval", "Bqe Marze", "Bqe Palatine", "Bqe Populaire", "Bqe Postale", "BRED", "Caisse d'Epargne", "Caisse des Dépôts", "Carrefour", "Casden", "Casino", "CCF", "CIC", "Courtois", "Crdt Agricole", "Crdt Coopératif", "Crdt du Nord", "Crdt Maritime", "Crdt Municipal", "Crdt Mutuel", "Fortunéo", "Hello Bank!", "HSBC", "ING", "KOLB", "la NEF", "Laydernier", "LCL", "Louvre Banque privée", "Monabanq", "Millies", "Nuger", "Orange", "PSA", "RCI", "Rhone Alpes", "SMC", "Soc Générale", "Socram", "Tarneaud", "VTB"];
 const SITES=["Desaix"];
 
 const SEED=[];
@@ -818,7 +818,7 @@ function renderCheques(){
       </div>
       <div class="g2">
         <div><div style="font-size:11px;color:var(--text2);margin-bottom:3px">Banque</div>
-          <select class="ci ci-sel" onchange="updateCF('${c.id}','banque',this.value)"><option value="">Choisir…</option>${selB.replace(`value="${c.banque}"`,`value="${c.banque}" selected`)}</select></div>
+          <select class="ci ci-sel" onchange="updateCF('${c.id}','banque',this.value)"><option value="">Choisir…</option>${(c.banque&&BANQUES.indexOf(c.banque)<0)?`<option value="${c.banque}" selected>${c.banque}</option>`+selB:selB.replace(`value="${c.banque}"`,`value="${c.banque}" selected`)}</select></div>
         <div><div style="font-size:11px;color:var(--text2);margin-bottom:3px">📅 Date d'encaissement</div>
           <input class="ci" type="date" value="${c.dateEncaissement}" oninput="updateCF('${c.id}','dateEncaissement',this.value);renderCheques()"></div>
       </div>
