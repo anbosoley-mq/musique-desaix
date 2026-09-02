@@ -203,7 +203,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .menu-toggle { display: block; }
   .g2,.g3,.g4 { grid-template-columns: 1fr; }
   .tbl { font-size: 12px; }
-  .instr-row { grid-template-columns: 1fr 50px 70px; }
+  .instr-row { grid-template-columns: 1fr 46px 66px; }
   .instr-row > div:nth-child(4) { display: none; }
 }
 
@@ -249,6 +249,35 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   #doc-sheet { max-width: none; margin: 0; padding: 0; box-shadow: none; border-radius: 0; }
   @page { size: A4; margin: 16mm; }
 }
+
+/* ─── Activités multiples ─── */
+.acts-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.act-chip { display: flex; align-items: center; gap: 7px; padding: 9px 10px; border: 1.5px solid var(--border); border-radius: 9px; cursor: pointer; background: var(--card); transition: border-color .15s, background .15s; font-size: 12.5px; user-select: none; min-width: 0; }
+.act-chip > span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-chip:hover { border-color: var(--blue); }
+.act-chip.on { border-color: var(--navy); background: var(--blue-light); font-weight: 600; }
+.act-chip input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--navy); flex: none; }
+.act-chip .act-px { margin-left: auto; font-size: 11px; color: var(--text2); font-weight: 400; white-space: nowrap; overflow: visible; flex: none; }
+.act-chip.on .act-px { color: var(--navy); }
+/* ─── Bandeau fratrie ─── */
+.fratrie-box { border: 1px solid var(--gold); background: var(--sand); border-radius: 9px; padding: 11px 13px; margin: 10px 0; font-size: 12.5px; line-height: 1.55; }
+.fratrie-box .fb-t { font-weight: 600; color: var(--orange); margin-bottom: 5px; }
+.fratrie-box .fb-acts { display: flex; gap: 7px; flex-wrap: wrap; margin-top: 8px; }
+/* ─── Détail tarifaire ─── */
+.tarif-box { border: 1px solid var(--border); background: var(--bg); border-radius: 9px; padding: 11px 13px; margin-top: 8px; font-size: 12.5px; }
+.tarif-line { display: flex; justify-content: space-between; padding: 3px 0; }
+.tarif-line.tl-remise { color: var(--green); font-weight: 600; }
+.tarif-line.tl-total { border-top: 1px solid var(--border); margin-top: 6px; padding-top: 7px; font-size: 14px; font-weight: 700; color: var(--navy); }
+/* ─── Mode édition ─── */
+body.editing .page-header h1::after { content: ' ✏️'; }
+.row-clic { cursor: pointer; }
+.row-clic:hover { background: var(--blue-light); }
+@media (max-width: 900px) { .acts-grid { grid-template-columns: repeat(2, 1fr); } }
+/* le tableau par discipline manquait de place entre 700 et 830 px (tablette) */
+@media (max-width: 830px) and (min-width: 701px) {
+  .instr-row { grid-template-columns: 1fr 44px 74px 74px 78px; gap: 5px; font-size: 12px; }
+  .instr-row.hdr { font-size: 10px; letter-spacing: 0; }
+}
 </style>
 </head>
 <body>
@@ -278,7 +307,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   </div>
   <nav class="sidebar-nav">
     <div class="nav-section">Inscriptions</div>
-    <button class="nav-item active" onclick="showPage('inscription')">✏️ &nbsp;Nouveau inscrit</button>
+    <button class="nav-item active" onclick="nouvelleInscription()">✏️ &nbsp;Nouveau inscrit</button>
     <button class="nav-item" onclick="showPage('liste')">📋 &nbsp;Liste <span class="badge" id="nb-inscrits">0</span></button>
     <div class="nav-section">Gestion</div>
     <button class="nav-item" onclick="showPage('paiements')">💳 &nbsp;Paiements</button>
@@ -304,39 +333,35 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 <!-- PAGE INSCRIPTION -->
 <div class="page active" id="page-inscription">
   <div class="page-header">
-    <h1>Nouvelle inscription</h1>
-    <p>Remplissez le formulaire et validez pour ajouter l'adhérent</p>
+    <h1 id="ins-title">Nouvelle inscription</h1>
+    <p id="ins-sub">Remplissez le formulaire et validez pour ajouter l'adhérent</p>
   </div>
   <form onsubmit="return false">
   <div class="card">
     <div class="card-title">Identité</div>
     <div class="g3">
-      <div class="field"><label>NOM <span class="req">*</span></label><input type="text" id="f_nom" placeholder="Nom de famille" required></div>
+      <div class="field"><label>NOM <span class="req">*</span></label><input type="text" id="f_nom" placeholder="Nom de famille" required oninput="detectFratrie()"></div>
       <div class="field"><label>PRÉNOM <span class="req">*</span></label><input type="text" id="f_prenom" placeholder="Prénom" required></div>
       <div class="field"><label>ÂGE <span class="req">*</span></label><input type="number" id="f_age" min="5" max="99" placeholder="ex. 12" oninput="onAgeInput()"><div class="hint" id="age_hint"></div></div>
     </div>
     <div class="g3">
       <div class="field"><label>CATÉGORIE</label><input type="text" id="f_cat" readonly></div>
-      <div class="field"><label>INSTRUMENT <span class="req">*</span></label>
-        <select id="f_instr" onchange="updateTarif()">
-          <option value="">-- Choisir --</option>
-          <option value="GUITARE">🎸 Guitare</option>
-          <option value="PIANO">🎹 Piano</option>
-          <option value="CHANT">🎤 Chant</option>
-          <option value="PERCUSSIONS">🥁 Percussions</option>
-        </select>
-      </div>
     </div>
+    <div class="field">
+      <label>ACTIVITÉS <span class="req">*</span> <span style="font-weight:400;color:var(--text3)">— plusieurs choix possibles</span></label>
+      <div id="f_acts" class="acts-grid"></div>
+    </div>
+    <div id="fratrie_info"></div>
     <div id="tarif_info" style="font-size:12px;color:var(--text2);margin-top:4px"></div>
   </div>
 
   <div class="card">
     <div class="card-title">Coordonnées</div>
     <div class="g2" style="margin-bottom:12px">
-      <div class="field"><label>TÉLÉPHONE</label><input type="tel" id="f_tel" placeholder="06 96 XX XX XX"></div>
-      <div class="field"><label>EMAIL</label><input type="email" id="f_email" placeholder="adresse@email.fr"></div>
+      <div class="field"><label>TÉLÉPHONE</label><input type="tel" id="f_tel" placeholder="06 96 XX XX XX" oninput="detectFratrie()"></div>
+      <div class="field"><label>EMAIL</label><input type="email" id="f_email" placeholder="adresse@email.fr" oninput="detectFratrie()"></div>
     </div>
-    <div class="field"><label>CONTACT PARENT / TUTEUR</label><input type="text" id="f_parent" placeholder="Nom + tél (pour les mineurs)"></div>
+    <div class="field"><label>CONTACT PARENT / TUTEUR</label><input type="text" id="f_parent" placeholder="Nom + tél (pour les mineurs)" oninput="detectFratrie()"></div>
   </div>
 
   <div class="card">
@@ -403,20 +428,23 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
     <div class="field"><textarea id="f_obs" placeholder="Notes, cas particuliers, modalités particulières..."></textarea></div>
   </div>
 
-  <button class="btn btn-primary btn-full" style="padding:11px" onclick="addAdherent()">✅ &nbsp;Valider l'inscription</button>
+  <div style="display:flex;gap:9px;align-items:stretch">
+    <button id="btn-submit" class="btn btn-primary btn-full" style="padding:11px" onclick="addAdherent()">✅ &nbsp;Valider l'inscription</button>
+    <button id="btn-cancel-edit" class="btn btn-outline" style="padding:11px 18px;display:none;white-space:nowrap" onclick="cancelEdit()">Annuler</button>
+  </div>
   </form>
 </div>
 
 <!-- PAGE LISTE -->
 <div class="page" id="page-liste">
   <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
-    <div><h1>Liste des inscrits</h1><p>Tous sites confondus</p></div>
+    <div><h1>Liste des inscrits</h1><p>Cliquez sur une ligne pour rouvrir et corriger la fiche</p></div>
     <button class="btn btn-outline" onclick="exportXLSX()">⬇️ Excel</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     <table class="tbl" id="tbl-liste">
       <thead><tr>
-        <th>#</th><th>Nom / Prénom</th><th>Instrument</th><th>Catégorie</th><th>Contact</th><th>Paiement</th><th>Total</th><th></th>
+        <th>#</th><th>Nom / Prénom</th><th>Activités</th><th>Catégorie</th><th>Contact</th><th>Paiement</th><th>Total</th><th></th>
       </tr></thead>
       <tbody id="tbody-liste"></tbody>
     </table>
@@ -606,6 +634,124 @@ const TARIFS={GUITARE:500,PIANO:500,CHANT:400,PERCUSSIONS:300};
 const BANQUES=["Autre", "Accord", "Allianz", "AXA", "BFCAG", "BFM", "BFOR Bank", "BNP", "Boursorama", "BoursoBank", "Bqe Atlantique", "Bqe BCP", "Bqe Chalus", "Bqe de Savoie", "Bqe des Antilles", "Bqe des Caraïbes", "Bqe Dupuy de Perceval", "Bqe Marze", "Bqe Palatine", "Bqe Populaire", "Bqe Postale", "BRED", "Caisse d'Epargne", "Caisse des Dépôts", "Carrefour", "Casden", "Casino", "CCF", "CIC", "Courtois", "Crdt Agricole", "Crdt Coopératif", "Crdt du Nord", "Crdt Maritime", "Crdt Municipal", "Crdt Mutuel", "Fortunéo", "Hello Bank!", "HSBC", "ING", "KOLB", "la NEF", "Laydernier", "LCL", "Louvre Banque privée", "Monabanq", "Millies", "Nuger", "Orange", "PSA", "RCI", "Rhone Alpes", "SMC", "Soc Générale", "Socram", "Tarneaud", "VTB"];
 const SITES=["Desaix"];
 
+// ═══════════════════════════════════════════════════════════
+// ACTIVITÉS MULTIPLES & REMISES  (règles validées 02/09/2026)
+// ───────────────────────────────────────────────────────────
+// Un adhérent peut suivre plusieurs activités. Le champ historique `instr`
+// est conservé (= 1re activité) pour ne pas casser les fiches déjà saisies.
+// Adhésion : 25 € par personne, une seule fois, JAMAIS réduite.
+// Remises : sur le tarif des COURS uniquement, NON cumulables -> la plus favorable.
+// ═══════════════════════════════════════════════════════════
+const ACTIVITES=[
+  {code:'GUITARE',    label:'Guitare',     emoji:'🎸'},
+  {code:'PIANO',      label:'Piano',       emoji:'🎹'},
+  {code:'CHANT',      label:'Chant',       emoji:'🎤'},
+  {code:'PERCUSSIONS',label:'Percussions', emoji:'🥁'}
+];
+const ADH=25;                 // adhésion à la section — hors remise
+const REMISE_FRATRIE_2=0.10;  // 2 enfants (mineurs) du même foyer
+const REMISE_FRATRIE_3=0.15;  // 3 enfants et plus (au-delà de 3, on reste à 15 %)
+const REMISE_MULTI=0.10;      // 2 activités ou plus pour la même personne
+
+// Activités d'une fiche — rétro-compatible avec les fiches mono-instrument
+function actsOf(a){
+  if(a&&Array.isArray(a.activites)&&a.activites.length)return a.activites;
+  return (a&&a.instr)?[a.instr]:[];
+}
+function actsLabel(a){return actsOf(a).join(' + ')||'—';}
+function actsBadges(a,fs){
+  const s=fs?` style="font-size:${fs}"`:'';
+  const l=actsOf(a);
+  if(!l.length)return '<span style="color:var(--text2)">—</span>';
+  return l.map(i=>`<span class="badge badge-instr ${ic(i)}"${s}>${i}</span>`).join(' ');
+}
+function coursBrut(acts){return (acts||[]).reduce((s,i)=>s+(TARIFS[i]||0),0);}
+
+// ─── Foyer / fratrie ───────────────────────────────────────
+// Nombre d'ENFANTS (mineurs) du foyer, fiche courante comprise.
+function nbEnfantsFoyer(foyer,exclN,ageCourant){
+  const soi=(ageCourant!==undefined&&ageCourant!==null&&!isNaN(ageCourant)&&ageCourant<18)?1:0;
+  if(!foyer)return soi;
+  const autres=adherents.filter(x=>x.foyer===foyer&&x.n!==exclN&&x.age<18).length;
+  return autres+soi;
+}
+function normTxt(s){return (s||'').toString().trim().toUpperCase().replace(/\s+/g,' ');}
+function normTel(s){return (s||'').toString().replace(/\D/g,'');}
+// Candidats fratrie : même NOM **et** un contact commun (parent, tél ou email)
+function fratrieCandidats(nom,tel,email,parent,exclN){
+  const N=normTxt(nom),T=normTel(tel),E=normTxt(email),P=normTxt(parent);
+  if(!N)return[];
+  return adherents.filter(x=>{
+    if(x.n===exclN)return false;
+    if(normTxt(x.nom)!==N)return false;
+    return (P&&normTxt(x.parent)===P)||(T&&T.length>=6&&normTel(x.tel)===T)||(E&&normTxt(x.email)===E);
+  });
+}
+function newFoyerId(){return 'F'+Date.now().toString(36)+Math.floor(Math.random()*1296).toString(36);}
+function membresFoyer(foyer,exclN){
+  if(!foyer)return[];
+  return adherents.filter(x=>x.foyer===foyer&&x.n!==exclN);
+}
+
+// ─── Moteur tarifaire ──────────────────────────────────────
+function tauxRemise(nbEnf,nbActs){
+  let t=0;
+  if(nbEnf>=3)t=Math.max(t,REMISE_FRATRIE_3);
+  else if(nbEnf===2)t=Math.max(t,REMISE_FRATRIE_2);
+  if(nbActs>=2)t=Math.max(t,REMISE_MULTI);
+  return t;
+}
+function motifRemise(nbEnf,nbActs){
+  const t=tauxRemise(nbEnf,nbActs);if(!t)return'';
+  const f=(nbEnf>=3)?REMISE_FRATRIE_3:(nbEnf===2?REMISE_FRATRIE_2:0);
+  const m=(nbActs>=2)?REMISE_MULTI:0;
+  if(f>0&&f>=m)return`fratrie ${nbEnf} enfants`;
+  if(m>0)return`${nbActs} activités`;
+  return'';
+}
+// Calcul complet d'une fiche
+function calcTarif(acts,nbEnf){
+  acts=acts||[];
+  const brut=coursBrut(acts);
+  const taux=tauxRemise(nbEnf,acts.length);
+  const remise=Math.round(brut*taux);
+  const net=brut-remise;
+  const r=repartTrim(net);
+  return{brut,taux,remise,net,t1:r[0],t2:r[1],t3:r[2],adh:ADH,total:net+ADH,motif:motifRemise(nbEnf,acts.length)};
+}
+// Ventile les montants d'une fiche entre ses activités, au prorata de leur tarif.
+// Indispensable pour le récap par discipline : sans ça, un adhérent qui suit deux
+// activités serait compté deux fois et les totaux seraient faux.
+// Le reliquat d'arrondi va à la 1re activité pour que la somme reste exacte.
+function ventile(a){
+  const acts=actsOf(a),res={};
+  if(!acts.length)return res;
+  const vals={adh:Math.round(a.adh||0),t1:Math.round(a.t1||0),t2:Math.round(a.t2||0),t3:Math.round(a.t3||0)};
+  if(acts.length===1){res[acts[0]]={adh:vals.adh,t1:vals.t1,t2:vals.t2,t3:vals.t3};return res;}
+  const somme=acts.reduce((s,i)=>s+(TARIFS[i]||0),0)||1;
+  acts.forEach(i=>res[i]={adh:0,t1:0,t2:0,t3:0});
+  ['adh','t1','t2','t3'].forEach(k=>{
+    let reste=vals[k];
+    acts.forEach((i,idx)=>{
+      if(idx===0)return;                       // la 1re activité absorbe le reliquat
+      const part=Math.round(vals[k]*(TARIFS[i]||0)/somme);
+      res[i][k]=part;reste-=part;
+    });
+    res[acts[0]][k]=reste;
+  });
+  return res;
+}
+function partDe(a,instr){
+  const v=ventile(a)[instr];
+  return v||{adh:0,t1:0,t2:0,t3:0};
+}
+// Recalcul d'une fiche existante (utilisé par l'alerte de recalcul fratrie)
+function recalcFiche(a){
+  const acts=actsOf(a);
+  const nbEnf=nbEnfantsFoyer(a.foyer,a.n,a.age);
+  return calcTarif(acts,nbEnf);
+}
+
 const SEED=[];
 
 function loadData(){
@@ -766,21 +912,117 @@ function repartTrim(annuel){
   const q=Math.floor(annuel/3), r=annuel-3*q;
   return [q+(r>0?1:0), q+(r>1?1:0), q];
 }
-function updateTarif(){
-  const instr=document.getElementById('f_instr').value;
-  const age=parseInt(document.getElementById('f_age').value);
+// ─── Sélection des activités ───────────────────────────────
+let actsForm=[];      // codes des activités cochées dans le formulaire
+let foyerForm=null;   // foyer auquel la fiche est rattachée (fratrie)
+let editingN=null;    // n° de la fiche en cours d'édition — null = nouvelle inscription
+let fratrieIgnoree=false;
+
+function renderActs(){
+  const c=document.getElementById('f_acts');
+  if(!c)return;
+  c.innerHTML=ACTIVITES.map(a=>{
+    const on=actsForm.indexOf(a.code)>=0;
+    return `<label class="act-chip${on?' on':''}">
+      <input type="checkbox" ${on?'checked':''} onchange="toggleAct('${a.code}',this.checked)">
+      <span>${a.emoji} ${a.label}</span>
+      <span class="act-px">${TARIFS[a.code]} €</span>
+    </label>`;
+  }).join('');
+}
+function toggleAct(code,on){
+  if(on){if(actsForm.indexOf(code)<0)actsForm.push(code);}
+  else actsForm=actsForm.filter(x=>x!==code);
+  // ordre stable = celui de la grille
+  actsForm=ACTIVITES.map(a=>a.code).filter(c=>actsForm.indexOf(c)>=0);
+  renderActs();updateTarif();
+}
+
+// ─── Fratrie : détection et rattachement ───────────────────
+function detectFratrie(){
+  const box=document.getElementById('fratrie_info');
+  if(!box)return;
+  if(foyerForm){
+    const m=membresFoyer(foyerForm,editingN);
+    const nbE=nbEnfantsFoyer(foyerForm,editingN,parseInt(document.getElementById('f_age').value));
+    box.innerHTML=`<div class="fratrie-box"><div class="fb-t">👨‍👩‍👧 Foyer rattaché — ${nbE} enfant${nbE>1?'s':''} inscrit${nbE>1?'s':''}</div>`
+      +(m.length?m.map(x=>`${x.prenom} ${x.nom} (${x.age} ans)`).join(' · '):'Aucun autre membre pour le moment')
+      +`<div class="fb-acts"><button type="button" class="btn btn-outline" style="padding:4px 11px;font-size:11px" onclick="detacherFoyer()">Détacher du foyer</button></div></div>`;
+    updateTarif();return;
+  }
+  if(fratrieIgnoree){box.innerHTML='';return;}
+  const cand=fratrieCandidats(
+    document.getElementById('f_nom').value,
+    document.getElementById('f_tel').value,
+    document.getElementById('f_email').value,
+    document.getElementById('f_parent').value,
+    editingN);
+  if(!cand.length){box.innerHTML='';return;}
+  box.innerHTML=`<div class="fratrie-box"><div class="fb-t">👨‍👩‍👧 Fratrie possible</div>
+    Même nom de famille et même contact que <strong>${cand.map(x=>x.prenom+' ('+x.age+' ans)').join(', ')}</strong>.<br>
+    Le rattachement au même foyer ouvre droit à la remise fratrie sur les cours.
+    <div class="fb-acts">
+      <button type="button" class="btn btn-primary" style="padding:5px 13px;font-size:11px" onclick="rattacherFoyer(${cand[0].n})">✓ Rattacher au foyer</button>
+      <button type="button" class="btn btn-outline" style="padding:5px 13px;font-size:11px" onclick="ignorerFratrie()">Sans lien de parenté</button>
+    </div></div>`;
+}
+function ignorerFratrie(){fratrieIgnoree=true;detectFratrie();updateTarif();}
+function detacherFoyer(){foyerForm=null;fratrieIgnoree=true;detectFratrie();updateTarif();}
+// Rattache la fiche en cours au foyer d'une fiche existante (le crée au besoin).
+function rattacherFoyer(nCible){
+  const cible=adherents.find(a=>a.n===nCible);
+  if(!cible)return;
+  if(!cible.foyer){
+    const id=newFoyerId();
+    const grp=fratrieCandidats(cible.nom,cible.tel,cible.email,cible.parent,null);
+    grp.forEach(x=>{if(!x.foyer)x.foyer=id;});
+    cible.foyer=id;
+    saveData();
+  }
+  foyerForm=cible.foyer;
+  fratrieIgnoree=false;
+  detectFratrie();updateTarif();
+  toast('Foyer rattaché — remise fratrie prise en compte');
+}
+
+// ─── Calcul et affichage du tarif ──────────────────────────
+function updateTarif(write){
+  if(write===undefined)write=true;
   const info=document.getElementById('tarif_info');
-  if(!instr||isNaN(age)){info.innerHTML='';return;}
-  const m=TARIFS[instr]||0;
-  const ADH=25;                               // adhésion section — visible et distincte
-  const [t1,t2,t3]=repartTrim(m);             // répartition du cours en 3
-  document.getElementById('f_adh').value=ADH;
-  document.getElementById('f_t1').value=t1;
-  document.getElementById('f_t2').value=t2;
-  document.getElementById('f_t3').value=t3;
-  const badge=age<18?'<span class="badge badge-instr GUITARE">Enfant</span>':'<span class="badge badge-site Desaix">Adulte</span>';
-  info.innerHTML=badge+` Tarif annuel : <strong>${m} €</strong> · Adhésion : <strong>${ADH} €</strong> &nbsp;→&nbsp; 3 trimestres : <strong>${t1} €</strong> · <strong>${t2} €</strong> · <strong>${t3} €</strong> <span style="color:var(--text2)">(1er versement = ${t1} € + ${ADH} € d'adhésion = ${t1+ADH} €)</span>`
-    +`<br>Total à régler : <strong style="color:var(--navy)">${m+ADH} €</strong>`;
+  if(!info)return;
+  const age=parseInt(document.getElementById('f_age').value);
+  if(!actsForm.length){info.innerHTML='';return;}
+  const nbEnf=nbEnfantsFoyer(foyerForm,editingN,isNaN(age)?undefined:age);
+  const c=calcTarif(actsForm,nbEnf);
+  if(write){
+    document.getElementById('f_adh').value=c.adh;
+    document.getElementById('f_t1').value=c.t1;
+    document.getElementById('f_t2').value=c.t2;
+    document.getElementById('f_t3').value=c.t3;
+  }
+  const badge=isNaN(age)?'':(age<18
+    ?'<span class="badge badge-instr GUITARE">Enfant</span> '
+    :'<span class="badge badge-site Desaix">Adulte</span> ');
+  const det=actsForm.map(i=>`${i} ${TARIFS[i]} €`).join(' + ');
+  let h='<div class="tarif-box">';
+  h+=`<div class="tarif-line"><span>${badge}Cours : ${det}</span><strong>${c.brut} €</strong></div>`;
+  if(c.remise)h+=`<div class="tarif-line tl-remise"><span>Remise ${Math.round(c.taux*100)} % — ${c.motif}</span><strong>− ${c.remise} €</strong></div>`;
+  h+=`<div class="tarif-line"><span>Adhésion à la section <span style="color:var(--text3)">(non remisée)</span></span><strong>${c.adh} €</strong></div>`;
+  h+=`<div class="tarif-line tl-total"><span>Total à régler</span><span>${c.total} €</span></div>`;
+  h+=`<div class="tarif-line" style="color:var(--text2);font-size:11.5px;border-top:1px dashed var(--border);margin-top:6px;padding-top:6px">`
+    +`<span>3 trimestres : ${c.t1} € · ${c.t2} € · ${c.t3} €</span>`
+    +`<span>1er versement = ${c.t1} + ${c.adh} = ${c.t1+c.adh} €</span></div>`;
+  const saisi=(parseInt(document.getElementById('f_adh').value)||0)
+             +(parseInt(document.getElementById('f_t1').value)||0)
+             +(parseInt(document.getElementById('f_t2').value)||0)
+             +(parseInt(document.getElementById('f_t3').value)||0);
+  if(saisi!==c.total){
+    h+=`<div class="tarif-line" style="color:var(--orange);background:var(--orange-light);margin:7px -13px -11px;padding:8px 13px;border-radius:0 0 8px 8px">`
+      +`<span>⚠️ Montants saisis : <strong>${saisi} €</strong> — différent du tarif calculé</span>`
+      +`<button type="button" class="btn btn-outline" style="padding:2px 9px;font-size:11px" onclick="updateTarif(true)">Recalculer</button></div>`;
+  }
+  h+='</div>';
+  info.innerHTML=h;
 }
 function estAide(m){return m==='ANCV'||m==='Pass sport'||m==="Pass'Sport";}
 function toggleChequeBlock(){
@@ -829,20 +1071,113 @@ function updateChequeTotal(){
   const t=chequesForm.reduce((s,c)=>s+(parseFloat(c.montant)||0),0);
   document.getElementById('cheque_total').textContent=chequesForm.length?`Total chèques : ${Math.round(t)} €`:'';
 }
+// ─── Remise à blanc du formulaire ──────────────────────────
+function resetForm(){
+  chequesForm=[];actsForm=[];foyerForm=null;editingN=null;fratrieIgnoree=false;
+  document.querySelectorAll('#page-inscription input:not([readonly]),#page-inscription select,#page-inscription textarea').forEach(el=>{
+    if(el.type==='number'&&el.id==='f_adh')el.value='25';
+    else if(el.type==='number')el.value='0';
+    else if(el.tagName==='SELECT')el.selectedIndex=0;
+    else el.value='';
+  });
+  document.getElementById('tarif_info').innerHTML='';
+  document.getElementById('fratrie_info').innerHTML='';
+  document.getElementById('age_hint').textContent='';
+  document.getElementById('cheques_list').innerHTML='';
+  document.getElementById('cheque_total').textContent='';
+  document.getElementById('cheque_block').style.display='none';
+  document.getElementById('aide_block').style.display='none';
+  renderActs();
+  setFormMode(false);
+}
+// Bascule création <-> édition (titre, boutons, liseré)
+function setFormMode(edit,a){
+  document.body.classList.toggle('editing',!!edit);
+  const t=document.getElementById('ins-title'),s=document.getElementById('ins-sub');
+  const b=document.getElementById('btn-submit'),c=document.getElementById('btn-cancel-edit');
+  if(edit){
+    t.textContent=`Modifier la fiche n°${a.n}`;
+    s.textContent=`${a.prenom} ${a.nom} — corrigez puis enregistrez`;
+    b.innerHTML='💾 &nbsp;Enregistrer les modifications';
+    c.style.display='';
+  }else{
+    t.textContent='Nouvelle inscription';
+    s.textContent="Remplissez le formulaire et validez pour ajouter l'adhérent";
+    b.innerHTML="✅ &nbsp;Valider l'inscription";
+    c.style.display='none';
+  }
+}
+function cancelEdit(){resetForm();showPage('liste');toast('Modification annulée');}
+// Entrée par le menu : on repart toujours d'un formulaire vierge
+function nouvelleInscription(){
+  if(editingN!==null&&!confirm('Une fiche est en cours de modification. Abandonner les changements ?')){
+    showPage('inscription');return;
+  }
+  resetForm();showPage('inscription');
+}
+
+// ─── Ouvrir une fiche existante pour correction ────────────
+function editAdherent(n){
+  const a=adherents.find(x=>x.n===n);
+  if(!a){toast('Fiche introuvable',true);return;}
+  editingN=n;
+  foyerForm=a.foyer||null;
+  fratrieIgnoree=!a.foyer;
+  actsForm=actsOf(a).slice();
+  document.getElementById('f_nom').value=a.nom||'';
+  document.getElementById('f_prenom').value=a.prenom||'';
+  document.getElementById('f_age').value=(a.age!==undefined&&a.age!==null)?a.age:'';
+  document.getElementById('f_cat').value=a.cat||'';
+  document.getElementById('age_hint').textContent=a.age<18?'→ Enfant':'→ Adulte';
+  document.getElementById('f_tel').value=a.tel||'';
+  document.getElementById('f_email').value=a.email||'';
+  document.getElementById('f_parent').value=a.parent||'';
+  document.getElementById('f_adh').value=a.adh||0;
+  document.getElementById('f_mode').value=a.mode||'Chèque';
+  document.getElementById('f_paie').value=a.paie||'NON';
+  document.getElementById('f_t1').value=a.t1||0;
+  document.getElementById('f_t2').value=a.t2||0;
+  document.getElementById('f_t3').value=a.t3||0;
+  document.getElementById('f_obs').value=a.obs||'';
+  // bloc aide
+  document.getElementById('f_aide_montant').value=a.aide?a.aide.montant:0;
+  document.getElementById('f_aide_ref').value=a.aide?(a.aide.ref||''):'';
+  document.getElementById('f_aide_solde').value=a.aide?(a.aide.solde||''):'';
+  // chèques
+  chequesForm=(a.cheques||[]).map(c=>({id:Date.now()+''+Math.floor(Math.random()*99999),
+    libelle:c.libelle||'',montant:c.montant||'',numero:c.numero||'',banque:c.banque||'',dateEncaissement:c.dateEncaissement||''}));
+  renderActs();
+  toggleChequeBlock();
+  renderCheques();
+  setFormMode(true,a);
+  detectFratrie();
+  updateTarif(false);   // false = on n'écrase PAS les montants déjà saisis
+  showPage('inscription');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ─── Créer OU enregistrer une fiche ────────────────────────
 function addAdherent(){
   const nom=document.getElementById('f_nom').value.trim().toUpperCase();
   const prenom=document.getElementById('f_prenom').value.trim();
   const age=parseInt(document.getElementById('f_age').value);
-  const instr=document.getElementById('f_instr').value;
   const site="Desaix";
-  if(!nom||!prenom||isNaN(age)||!instr){toast('Remplissez les champs obligatoires *',true);return;}
+  if(!nom||!prenom||isNaN(age)||!actsForm.length){
+    toast('Nom, prénom, âge et au moins une activité sont obligatoires',true);return;
+  }
   const mode=document.getElementById('f_mode').value;
-  const n=adherents.length>0?Math.max(...adherents.map(a=>a.n))+1:1;
+  const edition=(editingN!==null);
+  const ancienne=edition?adherents.find(x=>x.n===editingN):null;
+  if(edition&&!ancienne){toast('Fiche introuvable',true);resetForm();return;}
+  const n=edition?editingN:(adherents.length>0?Math.max(...adherents.map(a=>a.n))+1:1);
   const a={n,nom,prenom,age,cat:age<18?'Enfant':'Adulte',
     tel:document.getElementById('f_tel').value.trim(),
     email:document.getElementById('f_email').value.trim(),
     parent:document.getElementById('f_parent').value.trim(),
-    instr,site,adh:parseInt(document.getElementById('f_adh').value)||0,
+    activites:actsForm.slice(),
+    instr:actsForm[0],                       // compat : 1re activité
+    foyer:foyerForm||null,
+    site,adh:parseInt(document.getElementById('f_adh').value)||0,
     paie:document.getElementById('f_paie').value,mode,
     t1:parseInt(document.getElementById('f_t1').value)||0,
     t2:parseInt(document.getElementById('f_t2').value)||0,
@@ -851,28 +1186,51 @@ function addAdherent(){
     aide:estAide(mode)?{type:mode,montant:parseFloat(document.getElementById('f_aide_montant').value)||0,ref:document.getElementById('f_aide_ref').value.trim(),solde:document.getElementById('f_aide_solde').value}:null,
     obs:document.getElementById('f_obs').value.trim()
   };
-  adherents.push(a);
-  paiementStatus[a.n]={t1:a.paie==='OUI',t2:a.paie==='OUI',t3:a.paie==='OUI',adh:a.paie==='OUI'};
+  const foyerTouche=a.foyer;
+  if(edition){
+    adherents[adherents.findIndex(x=>x.n===n)]=a;
+    // le suivi des encaissements déjà coché n'est JAMAIS réinitialisé
+    if(!paiementStatus[n])paiementStatus[n]={t1:a.paie==='OUI',t2:a.paie==='OUI',t3:a.paie==='OUI',adh:a.paie==='OUI'};
+  }else{
+    adherents.push(a);
+    paiementStatus[n]={t1:a.paie==='OUI',t2:a.paie==='OUI',t3:a.paie==='OUI',adh:a.paie==='OUI'};
+  }
   saveData();savePS();
-  chequesForm=[];
-  document.getElementById('inscriptionForm')?document.getElementById('inscriptionForm').reset():null;
-  document.querySelectorAll('#page-inscription input:not([readonly]),#page-inscription select,#page-inscription textarea').forEach(el=>{
-    if(el.type==='number'&&(el.id==='f_adh'))el.value='25';
-    else if(el.type==='number')el.value='0';
-    else if(el.tagName==='SELECT')el.selectedIndex=0;
-    else el.value='';
-  });
-  document.getElementById('tarif_info').innerHTML='';
-  document.getElementById('age_hint').textContent='';
-  document.getElementById('cheques_list').innerHTML='';
-  document.getElementById('cheque_total').textContent='';
-  document.getElementById('cheque_block').style.display='none';
-  document.getElementById('aide_block').style.display='none';
+  resetForm();
   document.getElementById('nb-inscrits').textContent=adherents.length;
-  toast(`✅ ${prenom} ${nom} inscrit(e) — ${site} · ${instr}`);
+  toast(edition
+    ?`💾 Fiche de ${prenom} ${nom} mise à jour`
+    :`✅ ${prenom} ${nom} inscrit(e) — ${actsLabel(a)}`);
   renderAlerts();
   showPage('liste');
-  if(docSettings.autoRecu && a.cheques && a.cheques.length){ setTimeout(()=>openRecu(a.n), 300); }
+  if(foyerTouche)setTimeout(()=>proposerRecalculFoyer(foyerTouche,n),350);
+  if(!edition&&docSettings.autoRecu&&a.cheques&&a.cheques.length){setTimeout(()=>openRecu(a.n),300);}
+}
+
+// ─── Recalcul du foyer : jamais silencieux ─────────────────
+// L'arrivée (ou le départ) d'un frère/sœur change le tarif des autres fiches.
+// On ne touche à rien sans validation explicite : des reçus ont pu être émis.
+function proposerRecalculFoyer(foyer,exclN){
+  if(!foyer)return;
+  const membres=adherents.filter(x=>x.foyer===foyer&&x.n!==exclN);
+  const aRevoir=[];
+  membres.forEach(m=>{
+    const c=recalcFiche(m);
+    const actuel=Math.round((m.adh||0)+(m.t1||0)+(m.t2||0)+(m.t3||0));
+    if(actuel!==c.total)aRevoir.push({m,c,actuel});
+  });
+  if(!aRevoir.length)return;
+  const det=aRevoir.map(o=>`  • ${o.m.prenom} ${o.m.nom} : ${o.actuel} € → ${o.c.total} €`
+    +(o.c.remise?` (remise ${Math.round(o.c.taux*100)} % — ${o.c.motif})`:' (plus de remise)')).join('\n');
+  const msg=`Ce foyer compte maintenant ${nbEnfantsFoyer(foyer,null)} enfant(s) inscrit(s).\n\n`
+    +`Le tarif des fiches suivantes ne correspond plus à la grille :\n\n${det}\n\n`
+    +`⚠️ Si des reçus ont déjà été remis ou des chèques encaissés, ils ne seront PAS modifiés — `
+    +`pensez à régulariser avec la famille.\n\nAppliquer le nouveau tarif à ces fiches ?`;
+  if(!confirm(msg))return;
+  aRevoir.forEach(o=>{o.m.adh=o.c.adh;o.m.t1=o.c.t1;o.m.t2=o.c.t2;o.m.t3=o.c.t3;});
+  saveData();
+  renderListe();renderAlerts();
+  toast(`${aRevoir.length} fiche(s) recalculée(s)`);
 }
 
 // ─── LISTE ────────────────────────────────────────────────
@@ -880,24 +1238,32 @@ function renderListe(){
   const tbody=document.getElementById('tbody-liste');
   if(!adherents.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">Aucun inscrit</td></tr>';return;}
   document.getElementById('nb-inscrits').textContent=adherents.length;
-  tbody.innerHTML=adherents.map(a=>`
-    <tr>
+  tbody.innerHTML=adherents.map(a=>{
+    const total=Math.round((a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0));
+    const fam=a.foyer?` <span title="Rattaché à un foyer — remise fratrie" style="cursor:help">👨‍👩‍👧</span>`:'';
+    return `
+    <tr class="row-clic" onclick="editAdherent(${a.n})" title="Cliquez pour rouvrir et corriger cette fiche">
       <td style="color:var(--text2);font-size:12px">${a.n}</td>
-      <td><strong>${a.nom}</strong><br><span style="font-size:12px;color:var(--text2)">${a.prenom}</span></td>
-      <td><span class="badge badge-instr ${ic(a.instr)}">${a.instr}</span></td>
+      <td><strong>${a.nom}</strong>${fam}<br><span style="font-size:12px;color:var(--text2)">${a.prenom}</span></td>
+      <td>${actsBadges(a)}</td>
       <td style="font-size:12px">${a.cat}</td>
       <td style="font-size:12px;color:var(--text2)">${a.email||a.parent||a.tel||'—'}</td>
       <td><span class="badge badge-${a.paie.toLowerCase()}">${a.paie==='OUI'?'Payé ✓':a.paie==='NON'?'En attente':'Partiel'}</span></td>
-      <td style="font-weight:500">${Math.round(a.adh+a.t1+a.t2+a.t3)} €</td>
-      <td style="white-space:nowrap"><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px" onclick="deleteAdherent(${a.n})">✕</button></td>
-    </tr>`).join('');
+      <td style="font-weight:500">${total} €</td>
+      <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="editAdherent(${a.n})" title="Modifier la fiche">✏️</button><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px" onclick="deleteAdherent(${a.n})">✕</button></td>
+    </tr>`;}).join('');
 }
 function deleteAdherent(n){
   if(!confirm('Supprimer cet adhérent ?'))return;
+  const sup=adherents.find(a=>a.n===n);
+  const foyer=sup?sup.foyer:null;
   adherents=adherents.filter(a=>a.n!==n);
+  if(editingN===n)resetForm();
   saveData();renderListe();renderAlerts();
   document.getElementById('nb-inscrits').textContent=adherents.length;
   toast('Adhérent supprimé');
+  // un départ peut faire perdre la remise fratrie aux frères et sœurs restants
+  if(foyer)setTimeout(()=>proposerRecalculFoyer(foyer,n),300);
 }
 
 // ─── PAIEMENTS ────────────────────────────────────────────
@@ -905,10 +1271,13 @@ function renderPaiements(){
   const cont=document.getElementById('paiements-content');
   if(!adherents.length){cont.innerHTML='<div style="text-align:center;padding:40px;color:var(--text2)">Aucune donnée</div>';return;}
   let html='';
+  // Un encaissement se suit PAR PERSONNE : chaque adhérent n'apparaît qu'une fois,
+  // dans le groupe de sa 1re activité. Ses autres activités sont rappelées par les badges.
   const byInstr={};
-  adherents.forEach(a=>{if(!byInstr[a.instr])byInstr[a.instr]=[];byInstr[a.instr].push(a);});
+  adherents.forEach(a=>{const p=actsOf(a)[0]||'—';if(!byInstr[p])byInstr[p]=[];byInstr[p].push(a);});
   Object.keys(byInstr).sort().forEach(instr=>{
-      html+=`<div class="card" style="margin-bottom:10px;padding:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="badge badge-instr ${ic(instr)}">${instr}</span><span style="font-size:12px;color:var(--text2)">${byInstr[instr].length} inscrit(s)</span></div>`;
+      const nbMulti=byInstr[instr].filter(a=>actsOf(a).length>1).length;
+      html+=`<div class="card" style="margin-bottom:10px;padding:14px"><div style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><span class="badge badge-instr ${ic(instr)}">${instr}</span><span style="font-size:12px;color:var(--text2)">${byInstr[instr].length} inscrit(s)${nbMulti?` · dont ${nbMulti} multi-activités`:''}</span></div>`;
       byInstr[instr].forEach(a=>{
         const ps=paiementStatus[a.n]||{adh:false,t1:false,t2:false,t3:false};
         const total=a.adh+a.t1+a.t2+a.t3;
@@ -917,7 +1286,7 @@ function renderPaiements(){
         const hasCh=a.cheques&&a.cheques.length;
         html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bg2)">
           <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
-            <div><strong>${a.nom} ${a.prenom}</strong> <span style="font-size:12px;color:var(--text2)">· ${a.cat} · ${a.mode||'—'}${a.aide&&a.aide.montant>0?` · aide ${Math.round(a.aide.montant)} €`:''}</span></div>
+            <div><strong>${a.nom} ${a.prenom}</strong> ${actsOf(a).length>1?actsBadges(a,'10px'):''} <span style="font-size:12px;color:var(--text2)">· ${a.cat} · ${a.mode||'—'}${a.aide&&a.aide.montant>0?` · aide ${Math.round(a.aide.montant)} €`:''}</span></div>
             <div style="font-size:13px"><span style="color:var(--green);font-weight:500">${Math.round(paye)} €</span> <span style="color:var(--text2)">/ ${Math.round(total)} €</span>${paye<total?` <span style="color:var(--red);font-size:11px">−${Math.round(total-paye)} €</span>`:''}</div>
           </div>
           <div class="check-grid">
@@ -956,8 +1325,12 @@ function instrTable(list){
   const instrs=["GUITARE","PIANO","CHANT","PERCUSSIONS"];
   let rows='',gAdh=0,gT1=0,gT2=0,gT3=0,gTot=0;
   instrs.forEach(instr=>{
-    const sub=list.filter(a=>a.instr===instr);if(!sub.length)return;
-    const adh=sub.reduce((s,a)=>s+a.adh,0),t1=sub.reduce((s,a)=>s+a.t1,0),t2=sub.reduce((s,a)=>s+a.t2,0),t3=sub.reduce((s,a)=>s+a.t3,0),tot=adh+t1+t2+t3;
+    // un adhérent multi-activités figure dans CHAQUE discipline qu'il suit,
+    // mais avec sa seule quote-part : la somme des lignes reste exacte.
+    const sub=list.filter(a=>actsOf(a).indexOf(instr)>=0);if(!sub.length)return;
+    let adh=0,t1=0,t2=0,t3=0;
+    sub.forEach(a=>{const v=partDe(a,instr);adh+=v.adh;t1+=v.t1;t2+=v.t2;t3+=v.t3;});
+    const tot=adh+t1+t2+t3;
     gAdh+=adh;gT1+=t1;gT2+=t2;gT3+=t3;gTot+=tot;
     rows+=`<div class="instr-row"><div><span class="badge badge-instr ${ic(instr)}">${instr}</span></div><div style="text-align:center;font-size:12px;color:var(--text2)">${sub.length}</div><div style="text-align:right;font-size:12px">${Math.round(adh)} €</div><div style="text-align:right;font-size:12px">${Math.round(t1+t2+t3)} €</div><div style="text-align:right;font-size:13px;font-weight:600;color:var(--navy)">${Math.round(tot).toLocaleString('fr-FR')} €</div></div>`;
   });
@@ -965,21 +1338,22 @@ function instrTable(list){
 }
 function renderRecapGlobal(){
   const total=adherents.length,payes=adherents.filter(a=>a.paie==='OUI').length,attente=adherents.filter(a=>a.paie==='NON').length;
+  const nbInscriptions=adherents.reduce((s,a)=>s+actsOf(a).length,0);
   const enc=adherents.reduce((s,a)=>s+a.adh+a.t1+a.t2+a.t3,0);
   const {rows,gAdh,gT1,gT2,gT3,gTot}=instrTable(adherents);
   document.getElementById('recap-global-content').innerHTML=`
     <div class="g4" style="margin-bottom:16px">
-      <div class="stat-card"><div class="sv">${total}</div><div class="sl">Inscrits</div></div>
+      <div class="stat-card"><div class="sv">${total}</div><div class="sl">Inscrits${nbInscriptions>total?` · ${nbInscriptions} inscriptions`:''}</div></div>
       <div class="stat-card"><div class="sv" style="color:var(--green)">${payes}</div><div class="sl">Payés</div></div>
       <div class="stat-card"><div class="sv" style="color:var(--red)">${attente}</div><div class="sl">En attente</div></div>
       <div class="stat-card"><div class="sv" style="color:var(--navy);font-size:20px">${Math.round(enc).toLocaleString('fr-FR')} €</div><div class="sl">Total encaissé</div></div>
     </div>
     <div class="card">
-      <div class="card-title">Par instrument</div>
-      <div class="instr-row hdr"><div>Instrument</div><div style="text-align:center">Nb</div><div style="text-align:right">Adhésions</div><div style="text-align:right">Cotisations</div><div style="text-align:right">Total</div></div>
+      <div class="card-title">Par discipline${nbInscriptions>total?' <span style="text-transform:none;font-weight:400;letter-spacing:0">· montants ventilés au prorata</span>':''}</div>
+      <div class="instr-row hdr"><div>Discipline</div><div style="text-align:center">Nb</div><div style="text-align:right">Adhésions</div><div style="text-align:right">Cotisations</div><div style="text-align:right">Total</div></div>
       ${rows}
       <div class="instr-row" style="border-top:2px solid var(--border);margin-top:4px;padding-top:8px;font-weight:600">
-        <div>TOTAL GÉNÉRAL</div><div style="text-align:center">${total}</div>
+        <div>TOTAL GÉNÉRAL</div><div style="text-align:center">${total}${nbInscriptions>total?`<div style="font-size:10px;font-weight:400;color:var(--text2)">pers.</div>`:''}</div>
         <div style="text-align:right">${Math.round(gAdh)} €</div>
         <div style="text-align:right">${Math.round(gT1+gT2+gT3)} €</div>
         <div style="text-align:right;color:var(--navy)">${Math.round(gTot).toLocaleString('fr-FR')} €</div>
@@ -1005,7 +1379,7 @@ function genMails(){
       const dest=a.email||(a.cat==='Enfant'&&a.parent?null:null);
       const tpl=a.cat==='Enfant'?tplM:tplA;
       const suj=a.cat==='Enfant'?sujM:sujA;
-      const vars={PRENOM_ELEVE:a.prenom,NOM_ELEVE:a.nom,PRENOM:a.prenom,NOM:a.nom,INSTRUMENT:a.instr,SITE:"Desaix",MONTANT:Math.round(c.montant),NUM_CHEQUE:c.numero||'(à compléter)',BANQUE:c.banque||'',DATE_ENCAISSEMENT:fDate(c.dateEncaissement),TRIMESTRE:trimLabel(c.libelle||'')};
+      const vars={PRENOM_ELEVE:a.prenom,NOM_ELEVE:a.nom,PRENOM:a.prenom,NOM:a.nom,INSTRUMENT:actsLabel(a),SITE:"Desaix",MONTANT:Math.round(c.montant),NUM_CHEQUE:c.numero||'(à compléter)',BANQUE:c.banque||'',DATE_ENCAISSEMENT:fDate(c.dateEncaissement),TRIMESTRE:trimLabel(c.libelle||'')};
       const id=`${a.n}-${ci}-${c.dateEncaissement}`;
       const alreadySent=mailHistorique.find(h=>h.id===id&&h.status==='sent');
       mailsList.push({id,a,c,diff:df,dest:a.email,sujet:compileTpl(suj,vars),corps:compileTpl(tpl,vars),selected:!alreadySent,status:alreadySent?'sent':'pending'});
@@ -1044,7 +1418,7 @@ function renderMails(){
         <div class="mail-avatar ${m.a.cat==='Enfant'?'av-e':'av-a'}">${m.a.prenom[0]}${m.a.nom[0]}</div>
         <div class="mail-info">
           <div class="mail-nom">${m.a.nom} ${m.a.prenom} <span class="urg-tag ${urgCls}">${urgTxt}</span></div>
-          <div class="mail-meta">${m.a.cat} · ${m.a.instr} · ${Math.round(m.c.montant)} € · ${fDate(m.c.dateEncaissement)} ${m.dest?'· ✉ '+m.dest:'· <span style="color:var(--red)">⚠ Email manquant</span>'}</div>
+          <div class="mail-meta">${m.a.cat} · ${actsLabel(m.a)} · ${Math.round(m.c.montant)} € · ${fDate(m.c.dateEncaissement)} ${m.dest?'· ✉ '+m.dest:'· <span style="color:var(--red)">⚠ Email manquant</span>'}</div>
         </div>
         <span class="mail-status-tag ${stCls}">${stTxt}</span>
         <span style="font-size:12px;color:var(--text2);margin-left:6px">${isOpen?'▲':'▼'}</span>
@@ -1124,36 +1498,57 @@ function insVar(fieldId,v){const ta=document.getElementById(fieldId);if(!ta)retu
 function exportXLSX(){
   if(!window.XLSX){toast('Bibliothèque Excel non chargée',true);return;}
   const wb=XLSX.utils.book_new();
-  const inscRows=[["N°","NOM","PRÉNOM","ÂGE","CAT.","TÉL.","EMAIL","PARENT/TUTEUR","INSTRUMENT","ADHÉSION","PAIEMENT","MODE","AIDE","MONTANT AIDE","T1","T2","T3","TOTAL","OBSERVATIONS"]];
-  adherents.forEach(a=>inscRows.push([a.n,a.nom,a.prenom,a.age,a.cat,a.tel,a.email,a.parent,a.instr,a.adh,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.t1,a.t2,a.t3,a.adh+a.t1+a.t2+a.t3,a.obs]));
-  const ws1=XLSX.utils.aoa_to_sheet(inscRows);ws1['!cols']=[4,22,13,6,9,16,26,20,16,10,10,10,14,12,10,10,10,10,36].map(w=>({wch:w}));
+  const inscRows=[["N°","NOM","PRÉNOM","ÂGE","CAT.","TÉL.","EMAIL","PARENT/TUTEUR","ACTIVITÉS","NB ACT.","FOYER","REMISE","ADHÉSION","PAIEMENT","MODE","AIDE","MONTANT AIDE","T1","T2","T3","TOTAL","OBSERVATIONS"]];
+  adherents.forEach(a=>{
+    const c=recalcFiche(a);
+    inscRows.push([a.n,a.nom,a.prenom,a.age,a.cat,a.tel,a.email,a.parent,actsLabel(a),actsOf(a).length,a.foyer||'',
+      c.remise?`−${Math.round(c.taux*100)} % (${c.motif})`:'',
+      a.adh,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.t1,a.t2,a.t3,a.adh+a.t1+a.t2+a.t3,a.obs]);
+  });
+  const ws1=XLSX.utils.aoa_to_sheet(inscRows);ws1['!cols']=[4,22,13,6,9,16,26,20,26,8,12,22,10,10,10,14,12,10,10,10,10,36].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws1,"Inscriptions");
-  const chRows=[["N°","NOM","PRÉNOM","INSTRUMENT","LIBELLÉ","MONTANT","N° CHÈQUE","BANQUE","DATE ENCAISSEMENT","STATUT"]];
-  adherents.forEach(a=>{if(a.cheques&&a.cheques.length)a.cheques.forEach(c=>chRows.push([a.n,a.nom,a.prenom,a.instr,c.libelle,c.montant,c.numero,c.banque,fDate(c.dateEncaissement),a.paie]));});
-  const wsCh=XLSX.utils.aoa_to_sheet(chRows);wsCh['!cols']=[4,22,13,16,18,12,14,18,20,12].map(w=>({wch:w}));
+  const chRows=[["N°","NOM","PRÉNOM","ACTIVITÉS","LIBELLÉ","MONTANT","N° CHÈQUE","BANQUE","DATE ENCAISSEMENT","STATUT"]];
+  adherents.forEach(a=>{if(a.cheques&&a.cheques.length)a.cheques.forEach(c=>chRows.push([a.n,a.nom,a.prenom,actsLabel(a),c.libelle,c.montant,c.numero,c.banque,fDate(c.dateEncaissement),a.paie]));});
+  const wsCh=XLSX.utils.aoa_to_sheet(chRows);wsCh['!cols']=[4,22,13,26,18,12,14,18,20,12].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,wsCh,"Détail Chèques");
   ["GUITARE","PIANO","CHANT","PERCUSSIONS"].forEach(instr=>{
-    const list=adherents.filter(a=>a.instr===instr);if(!list.length)return;
-    const rows=[[`${instr} — ${SAISON.label}`],[],["N°","NOM","PRÉNOM","CAT.","ADH.","T1","T2","T3","TOTAL","MODE","STATUT","OBS."]];
-    list.forEach(a=>rows.push([a.n,a.nom,a.prenom,a.cat,a.adh,a.t1,a.t2,a.t3,a.adh+a.t1+a.t2+a.t3,a.mode,a.paie,a.obs]));
-    rows.push([]);rows.push(["","","","TOTAUX",list.reduce((s,a)=>s+a.adh,0),list.reduce((s,a)=>s+a.t1,0),list.reduce((s,a)=>s+a.t2,0),list.reduce((s,a)=>s+a.t3,0),list.reduce((s,a)=>s+a.adh+a.t1+a.t2+a.t3,0)]);
-    const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[4,22,13,9,10,10,10,10,10,10,10,36].map(w=>({wch:w}));
+    const list=adherents.filter(a=>actsOf(a).indexOf(instr)>=0);if(!list.length)return;
+    // montants ventilés : quote-part de cette discipline uniquement
+    const rows=[[`${instr} — ${SAISON.label}`],["Montants = quote-part de cette discipline pour les adhérents multi-activités"],[],
+      ["N°","NOM","PRÉNOM","CAT.","AUTRES ACT.","ADH.","T1","T2","T3","TOTAL","MODE","STATUT","OBS."]];
+    let sA=0,s1=0,s2=0,s3=0;
+    list.forEach(a=>{
+      const v=partDe(a,instr);sA+=v.adh;s1+=v.t1;s2+=v.t2;s3+=v.t3;
+      const autres=actsOf(a).filter(x=>x!==instr).join(' + ');
+      rows.push([a.n,a.nom,a.prenom,a.cat,autres,v.adh,v.t1,v.t2,v.t3,v.adh+v.t1+v.t2+v.t3,a.mode,a.paie,a.obs]);
+    });
+    rows.push([]);rows.push(["","","","","TOTAUX",sA,s1,s2,s3,sA+s1+s2+s3]);
+    const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[4,22,13,9,20,10,10,10,10,10,10,10,36].map(w=>({wch:w}));
     XLSX.utils.book_append_sheet(wb,ws,instr.replace('/','_').substring(0,31));
   });
-  const pRows=[["N°","NOM","PRÉNOM","INSTRUMENT","CAT.","ADH ✓","T1 ✓","T2 ✓","T3 ✓","TOTAL DÛ","TOTAL PAYÉ","RESTE","STATUT","MODE","AIDE","MONTANT AIDE","SOLDE RÉGLÉ PAR","CHÈQUES & DATES","OBS."]];
+  const pRows=[["N°","NOM","PRÉNOM","ACTIVITÉS","CAT.","ADH ✓","T1 ✓","T2 ✓","T3 ✓","TOTAL DÛ","TOTAL PAYÉ","RESTE","STATUT","MODE","AIDE","MONTANT AIDE","SOLDE RÉGLÉ PAR","CHÈQUES & DATES","OBS."]];
   adherents.forEach(a=>{
     const ps=paiementStatus[a.n]||{};
     const du=a.adh+a.t1+a.t2+a.t3,pa=(ps.adh?a.adh:0)+(ps.t1?a.t1:0)+(ps.t2?a.t2:0)+(ps.t3?a.t3:0);
     const chDet=(a.cheques||[]).map(c=>[c.numero,c.banque,c.montant+'€',fDate(c.dateEncaissement)].filter(Boolean).join('/')).join(' | ');
-    pRows.push([a.n,a.nom,a.prenom,a.instr,a.cat,ps.adh?"OUI":"NON",ps.t1?"OUI":"NON",ps.t2?"OUI":"NON",ps.t3?"OUI":"NON",du,pa,du-pa,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.aide?a.aide.solde:'',chDet,a.obs]);
+    pRows.push([a.n,a.nom,a.prenom,actsLabel(a),a.cat,ps.adh?"OUI":"NON",ps.t1?"OUI":"NON",ps.t2?"OUI":"NON",ps.t3?"OUI":"NON",du,pa,du-pa,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.aide?a.aide.solde:'',chDet,a.obs]);
   });
   const wsPaie=XLSX.utils.aoa_to_sheet(pRows);wsPaie['!cols']=[4,22,13,16,9,10,10,10,10,10,10,10,10,10,14,12,16,40,36].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,wsPaie,"Suivi Paiements");
-  const rRows=[["RÉCAPITULATIF — "+SAISON.label],[],["INSTRUMENT","INSCRITS","ADHÉSIONS","T1","T2","T3","TOTAL"]];
+  const rRows=[["RÉCAPITULATIF — "+SAISON.label],
+    ["Montants ventilés au prorata pour les adhérents multi-activités"],[],
+    ["DISCIPLINE","INSCRITS","ADHÉSIONS","T1","T2","T3","TOTAL"]];
   ["GUITARE","PIANO","CHANT","PERCUSSIONS"].forEach(instr=>{
-    const l=adherents.filter(a=>a.instr===instr);
-    rRows.push([instr,l.length,l.reduce((s,a)=>s+a.adh,0),l.reduce((s,a)=>s+a.t1,0),l.reduce((s,a)=>s+a.t2,0),l.reduce((s,a)=>s+a.t3,0),l.reduce((s,a)=>s+a.adh+a.t1+a.t2+a.t3,0)]);
+    const l=adherents.filter(a=>actsOf(a).indexOf(instr)>=0);
+    let vA=0,v1=0,v2=0,v3=0;
+    l.forEach(a=>{const v=partDe(a,instr);vA+=v.adh;v1+=v.t1;v2+=v.t2;v3+=v.t3;});
+    rRows.push([instr,l.length,vA,v1,v2,v3,vA+v1+v2+v3]);
   });
+  rRows.push([]);
+  rRows.push(["TOTAL",adherents.length,
+    adherents.reduce((s,a)=>s+(a.adh||0),0),adherents.reduce((s,a)=>s+(a.t1||0),0),
+    adherents.reduce((s,a)=>s+(a.t2||0),0),adherents.reduce((s,a)=>s+(a.t3||0),0),
+    adherents.reduce((s,a)=>s+(a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0),0)]);
   const wsR=XLSX.utils.aoa_to_sheet(rRows);wsR['!cols']=[18,12,14,12,12,12,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,wsR,"Récapitulatif");
   XLSX.writeFile(wb,`Musique_Desaix_${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.xlsx`);
@@ -1420,9 +1815,9 @@ function renderArchives(){
     const dt=new Date(a.dateArchivage).toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric',hour:'2-digit',minute:'2-digit'});
     const INSTRS=["GUITARE","PIANO","CHANT","PERCUSSIONS"];
     const byInstr=INSTRS.map(instr=>{
-      const sub=(a.adherents||[]).filter(x=>x.instr===instr);
+      const sub=(a.adherents||[]).filter(x=>actsOf(x).indexOf(instr)>=0);
       if(!sub.length)return'';
-      const tot=sub.reduce((s,x)=>s+x.adh+x.t1+x.t2+x.t3,0);
+      const tot=sub.reduce((s,x)=>{const v=partDe(x,instr);return s+v.adh+v.t1+v.t2+v.t3;},0);
       return`<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid var(--bg2)"><span class="badge badge-instr ${instr.startsWith('CHANT')?'CHANT':instr}" style="font-size:10px">${instr}</span><span>${sub.length} inscrits</span><span style="font-weight:500">${Math.round(tot).toLocaleString('fr-FR')} €</span></div>`;
     }).join('');
     return`<div class="card" style="margin-bottom:16px">
@@ -1441,16 +1836,16 @@ function renderArchives(){
         <div class="stat-card"><div class="sv" style="color:var(--green)">${a.stats.payes}</div><div class="sl">Payés</div></div>
         <div class="stat-card"><div class="sv" style="color:var(--navy);font-size:19px">${Math.round(a.stats.encaisse).toLocaleString('fr-FR')} €</div><div class="sl">Encaissé</div></div>
       </div>
-      <div><div class="card-title">Par instrument</div>${byInstr}</div>
+      <div><div class="card-title">Par discipline</div>${byInstr}</div>
       <details style="margin-top:12px">
         <summary style="cursor:pointer;font-size:12px;color:var(--text2);padding:6px 0">▶ Voir la liste complète des inscrits (${a.stats.total})</summary>
         <div style="margin-top:8px;max-height:300px;overflow-y:auto">
         <table class="tbl" style="font-size:12px">
-          <thead><tr><th>#</th><th>Nom</th><th>Prénom</th><th>Instrument</th><th>Statut</th><th>Total</th></tr></thead>
+          <thead><tr><th>#</th><th>Nom</th><th>Prénom</th><th>Activités</th><th>Statut</th><th>Total</th></tr></thead>
           <tbody>${(a.adherents||[]).map(x=>`<tr>
             <td style="color:var(--text2)">${x.n}</td>
             <td><strong>${x.nom}</strong></td><td>${x.prenom}</td>
-            <td><span class="badge badge-instr ${x.instr.startsWith('CHANT')?'CHANT':x.instr}" style="font-size:10px">${x.instr}</span></td>
+            <td>${actsBadges(x,'10px')}</td>
             <td><span class="badge badge-${x.paie.toLowerCase()}" style="font-size:10px">${x.paie==='OUI'?'Payé':x.paie==='NON'?'En attente':'Partiel'}</span></td>
             <td style="font-weight:500">${Math.round(x.adh+x.t1+x.t2+x.t3)} €</td>
           </tr>`).join('')}</tbody>
@@ -1471,14 +1866,14 @@ function exportArchiveXLSX(key){
   const arch=loadArchives();const a=arch[key];if(!a)return;
   const wb=XLSX.utils.book_new();
   const rows=[["N°","NOM","PRÉNOM","ÂGE","CAT.","INSTRUMENT","ADHÉSION","T1","T2","T3","TOTAL","PAIEMENT","MODE","OBS."]];
-  (a.adherents||[]).forEach(x=>rows.push([x.n,x.nom,x.prenom,x.age,x.cat,x.instr,x.adh,x.t1,x.t2,x.t3,x.adh+x.t1+x.t2+x.t3,x.paie,x.mode,x.obs]));
+  (a.adherents||[]).forEach(x=>rows.push([x.n,x.nom,x.prenom,x.age,x.cat,actsLabel(x),x.adh,x.t1,x.t2,x.t3,x.adh+x.t1+x.t2+x.t3,x.paie,x.mode,x.obs]));
   const ws=XLSX.utils.aoa_to_sheet(rows);ws['!cols']=[4,22,13,6,9,16,10,10,10,10,10,10,10,36].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws,`Saison ${a.label}`);
   // Récap
   const rRows=[["RÉCAPITULATIF — Saison "+a.label],[],["INSTRUMENT","NB","TOTAL"]];
   ["GUITARE","PIANO","CHANT","PERCUSSIONS"].forEach(instr=>{
-    const sub=(a.adherents||[]).filter(x=>x.instr===instr);
-    if(sub.length)rRows.push([instr,sub.length,sub.reduce((s,x)=>s+x.adh+x.t1+x.t2+x.t3,0)]);
+    const sub=(a.adherents||[]).filter(x=>actsOf(x).indexOf(instr)>=0);
+    if(sub.length)rRows.push([instr,sub.length,sub.reduce((s,x)=>{const v=partDe(x,instr);return s+v.adh+v.t1+v.t2+v.t3;},0)]);
   });
   const wsR=XLSX.utils.aoa_to_sheet(rRows);wsR['!cols']=[20,10,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,wsR,"Récapitulatif");
@@ -1620,7 +2015,7 @@ function openRecu(n){
   let html=docHeader('REÇU DE PAIEMENT',numLabel);
   html+=`<p class="doc-p">Je soussigné(e), pour le compte de <strong>${esc(s.assoNom||'l’association')}</strong>, reconnais avoir reçu de <strong>${esc(payeur)}</strong> la somme de <strong>${Math.round(total).toLocaleString('fr-FR')} €</strong>.</p>`;
   html+=`<p class="doc-lettres">Soit : ${nombreEnLettres(total)} euros.</p>`;
-  html+=`<p class="doc-p">Au titre de la cotisation à l'Activité Musique — <strong>${esc(a.instr)}</strong> de <strong>${esc(a.prenom+' '+a.nom)}</strong> (${esc(a.cat.toLowerCase())}), pour la saison ${SAISON.label}.</p>`;
+  html+=`<p class="doc-p">Au titre de la cotisation à l'Activité Musique — <strong>${esc(actsLabel(a))}</strong> de <strong>${esc(a.prenom+' '+a.nom)}</strong> (${esc(a.cat.toLowerCase())}), pour la saison ${SAISON.label}.</p>`;
   html+=`<table class="doc-table"><thead><tr><th>Désignation</th><th class="num">Montant</th></tr></thead><tbody>`;
   lignes.forEach(l=>{ html+=`<tr><td>${esc(l.label)}</td><td class="num">${Math.round(l.montant).toLocaleString('fr-FR')} €</td></tr>`; });
   html+=`</tbody><tfoot><tr><td>Total reçu — Mode : ${esc(a.mode||'—')}</td><td class="num">${Math.round(total).toLocaleString('fr-FR')} €</td></tr></tfoot></table>`;
@@ -1682,12 +2077,12 @@ function renderRecus(){
     <div class="hint">La signature, le nom et la fonction apparaîtront automatiquement en bas de chaque reçu et bordereau. Astuce : un PNG à fond transparent rend mieux.</div>
   </div>`;
   if(!adherents.length){ html+='<div class="card"><div style="text-align:center;padding:30px;color:var(--text2)">Aucun adhérent</div></div>'; document.getElementById('recus-content').innerHTML=html; initSignPad(); return; }
-  html+=`<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>#</th><th>Nom / Prénom</th><th>Instrument</th><th>Mode</th><th>Total</th><th>Reçu</th><th></th></tr></thead><tbody>`;
+  html+=`<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th>#</th><th>Nom / Prénom</th><th>Activités</th><th>Mode</th><th>Total</th><th>Reçu</th><th></th></tr></thead><tbody>`;
   adherents.forEach(a=>{
     const total=a.adh+a.t1+a.t2+a.t3;
     const r=recusIssued[a.n];
     const badge=r?`<span class="badge badge-oui">N° ${SAISON.label}-${pad3(r.num)}</span>`:'<span style="color:var(--text3);font-size:12px">—</span>';
-    html+=`<tr><td style="color:var(--text2);font-size:12px">${a.n}</td><td><strong>${esc(a.nom)}</strong> ${esc(a.prenom)}</td><td><span class="badge badge-instr ${ic(a.instr)}">${a.instr}</span></td><td style="font-size:12px">${esc(a.mode||'—')}</td><td style="font-weight:500">${Math.round(total).toLocaleString('fr-FR')} €</td><td>${badge}</td><td><button class="btn btn-outline" style="padding:5px 11px;font-size:12px" onclick="openRecu(${a.n})">🧾 ${r?'Voir':'Générer'}</button></td></tr>`;
+    html+=`<tr><td style="color:var(--text2);font-size:12px">${a.n}</td><td><strong>${esc(a.nom)}</strong> ${esc(a.prenom)}</td><td>${actsBadges(a)}</td><td style="font-size:12px">${esc(a.mode||'—')}</td><td style="font-weight:500">${Math.round(total).toLocaleString('fr-FR')} €</td><td>${badge}</td><td><button class="btn btn-outline" style="padding:5px 11px;font-size:12px" onclick="openRecu(${a.n})">🧾 ${r?'Voir':'Générer'}</button></td></tr>`;
   });
   html+=`</tbody></table></div>`;
   document.getElementById('recus-content').innerHTML=html;
@@ -1867,6 +2262,7 @@ document.getElementById('nb-inscrits').textContent=adherents.length;
 updateSaisonLabels();
 checkAutoArchive();
 renderAlerts();
+renderActs();
 toggleChequeBlock();
 applySidebarLogo();
 
