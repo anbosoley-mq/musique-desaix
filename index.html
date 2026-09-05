@@ -278,6 +278,31 @@ body.editing .page-header h1::after { content: ' ✏️'; }
   .instr-row { grid-template-columns: 1fr 44px 74px 74px 78px; gap: 5px; font-size: 12px; }
   .instr-row.hdr { font-size: 10px; letter-spacing: 0; }
 }
+
+/* ─── Import de chèques (2026-09-05) ─── */
+.imp-zone { width: 100%; min-height: 120px; font-family: ui-monospace, 'Cascadia Code', Consolas, monospace; font-size: 12.5px; padding: 11px 13px; border: 1.5px solid var(--border); border-radius: 9px; resize: vertical; background: var(--card); color: var(--text); }
+.imp-zone:focus { outline: none; border-color: var(--blue); }
+.imp-help { background: var(--bg); border: 1px dashed var(--border); border-radius: 9px; padding: 11px 13px; font-size: 12.5px; color: var(--text2); line-height: 1.55; }
+.imp-help code { background: var(--blue-light); color: var(--navy); padding: 1px 5px; border-radius: 4px; font-size: 12px; }
+.imp-wrap { overflow-x: auto; }
+.imp-tbl { width: 100%; border-collapse: collapse; font-size: 12.5px; min-width: 900px; }
+.imp-tbl th { background: var(--bg2); color: var(--text2); font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; text-align: left; padding: 8px 9px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+.imp-tbl td { padding: 7px 9px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+.imp-tbl tr.imp-off td { opacity: .45; }
+.imp-tbl input, .imp-tbl select { width: 100%; padding: 5px 7px; border: 1px solid var(--border); border-radius: 6px; font-size: 12.5px; font-family: inherit; background: var(--card); color: var(--text); }
+.imp-tbl input:focus, .imp-tbl select:focus { outline: none; border-color: var(--blue); }
+.imp-tbl input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--navy); cursor: pointer; }
+.imp-st { display: inline-block; font-size: 11px; font-weight: 600; padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+.imp-ok { background: var(--green-light); color: var(--green); }
+.imp-warn { background: var(--orange-light); color: var(--orange); }
+.imp-bad { background: var(--red-light); color: var(--red); }
+.imp-bilan { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-bottom: 12px; }
+.imp-kpi { background: var(--card); border: 1px solid var(--border); border-radius: 9px; padding: 11px 13px; }
+.imp-kpi .k { font-size: 10.5px; text-transform: uppercase; letter-spacing: .05em; color: var(--text3); margin-bottom: 3px; }
+.imp-kpi .v { font-size: 20px; font-weight: 700; color: var(--navy); font-family: 'DM Serif Display', serif; }
+.imp-src { font-size: 11px; color: var(--text3); font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
+.imp-tbl td:nth-child(2) { min-width: 180px; max-width: 240px; }
+@media (max-width: 760px) { .imp-bilan { grid-template-columns: repeat(2, 1fr); } }
 </style>
 </head>
 <body>
@@ -312,6 +337,7 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <div class="nav-section">Gestion</div>
     <button class="nav-item" onclick="showPage('paiements')">💳 &nbsp;Paiements</button>
     <button class="nav-item" onclick="showPage('mails')">📨 &nbsp;Mails <span class="badge" id="nb-mails-badge">0</span></button>
+    <button class="nav-item" onclick="showPage('import')">📥 &nbsp;Importer des chèques</button>
     <div class="nav-section">Récapitulatif</div>
     <button class="nav-item" onclick="showPage('recap-global')">📊 &nbsp;Récapitulatif</button>
     <div class="nav-section">Documents</div>
@@ -585,6 +611,30 @@ Saison {{SAISON_LABEL}}</textarea></div>
 </div>
 
 <!-- PAGE BORDEREAU -->
+<div class="page" id="page-import">
+  <div class="page-header"><h1>Importer des chèques</h1><p>Collez le tableau des chèques, vérifiez le rapprochement, puis appliquez</p></div>
+
+  <div class="card">
+    <div class="card-title">1 · Coller les chèques</div>
+    <div class="imp-help" style="margin-bottom:11px">
+      Une ligne par chèque, colonnes séparées par un point-virgule :<br>
+      <code>NOM Prénom ; libellé ; montant ; n° chèque ; banque ; date d'encaissement</code><br>
+      La date accepte <code>05/09/2026</code> ou <code>2026-09-05</code>. Le libellé, la banque et la date peuvent rester vides — vous les corrigerez juste en dessous.
+    </div>
+    <textarea class="imp-zone" id="imp_txt" placeholder="DUPONT Léa ; T1 ; 192 ; 4512378 ; Crdt Agricole ; 15/10/2026&#10;DUPONT Léa ; T2 ; 167 ; 4512379 ; Crdt Agricole ; 15/01/2027"></textarea>
+    <div style="display:flex;gap:9px;flex-wrap:wrap;margin-top:11px;align-items:center">
+      <button class="btn btn-primary" onclick="impAnalyser()">🔍 Analyser</button>
+      <button class="btn btn-outline" onclick="document.getElementById('imp_file').click()">📄 Ouvrir un fichier CSV</button>
+      <input type="file" id="imp_file" accept=".csv,.txt,text/csv,text/plain" style="display:none" onchange="impFichier(this)">
+      <button class="btn btn-outline" onclick="impReset()">Effacer</button>
+      <span style="flex:1"></span>
+      <button class="btn btn-danger-soft" onclick="impAnnuler()">↩️ Annuler le dernier import</button>
+    </div>
+  </div>
+
+  <div id="imp-result"></div>
+</div>
+
 <div class="page" id="page-bordereau">
   <div class="page-header"><h1>Bordereau de remise de chèques</h1><p>Cochez les chèques à déposer — le total s'incrémente automatiquement</p></div>
   <div id="bordereau-content"></div>
@@ -843,6 +893,264 @@ function ic(i){return i.startsWith('CHANT')?'CHANT':i;}
 function trimLabel(lib){if(!lib)return'';const l=lib.toUpperCase();if(l.includes('T3'))return'3e trimestre';if(l.includes('T2'))return'2e trimestre';if(l.includes('T1'))return'1er trimestre';if(l.includes('FORFAIT'))return'forfait annuel';return lib;}
 function compileTpl(tpl,vars){return tpl.replace(/\{\{(\w+)\}\}/g,(_,k)=>vars[k]!==undefined?vars[k]:`{{${k}}}`);}
 
+
+// ═══════════════════════════════════════════════════════════
+// IMPORT DE CHÈQUES — ajouté le 2026-09-05
+// On colle un tableau de chèques, l'app rapproche chaque ligne d'une fiche
+// existante, on vérifie à l'écran, et SEULES les lignes cochées sont écrites.
+// Rien n'est modifié tant que « Appliquer » n'a pas été cliqué, et l'état
+// précédent est conservé pour permettre une annulation.
+// Aucune fiche n'est créée ici : un chèque ne dit ni l'activité ni l'âge.
+// ═══════════════════════════════════════════════════════════
+let impLignes=[];
+
+// Orthographes courantes → libellé EXACT du classeur du club (const BANQUES).
+// Sans cette table, « Crédit Agricole » créerait une banque hors liste et
+// couperait le bordereau de remise en deux.
+const IMP_ALIAS={
+  'CREDIT AGRICOLE':'Crdt Agricole','CA':'Crdt Agricole','CAM':'Crdt Agricole',
+  'CREDIT MUTUEL':'Crdt Mutuel','CM':'Crdt Mutuel',
+  'CREDIT COOPERATIF':'Crdt Coopératif','CREDIT DU NORD':'Crdt du Nord',
+  'CREDIT MARITIME':'Crdt Maritime','CREDIT MUNICIPAL':'Crdt Municipal',
+  'SOCIETE GENERALE':'Soc Générale','SG':'Soc Générale','SGBA':'Soc Générale',
+  'LA BANQUE POSTALE':'Bqe Postale','BANQUE POSTALE':'Bqe Postale','LBP':'Bqe Postale',
+  'BANQUE DES ANTILLES FRANCAISES':'Bqe des Antilles','BANQUE DES ANTILLES':'Bqe des Antilles','BDAF':'Bqe des Antilles',
+  'BANQUE DES CARAIBES':'Bqe des Caraïbes',
+  'BANQUE POPULAIRE':'Bqe Populaire',
+  'CAISSE D EPARGNE':"Caisse d'Epargne",'CEPAC':"Caisse d'Epargne",
+  'BANQUE FRANCAISE COMMERCIALE':'BFCAG','BFC':'BFCAG',
+  'BNP PARIBAS':'BNP','CREDIT LYONNAIS':'LCL'
+};
+
+function impEsc(s){return (s||'').toString().replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function impNorm(s){return (s||'').toString().normalize('NFD').replace(/[\u0300-\u036f]/g,'').toUpperCase().replace(/[^A-Z0-9]+/g,' ').trim();}
+
+function impBanque(txt){
+  const t=impNorm(txt); if(!t)return '';
+  for(const b of BANQUES){if(impNorm(b)===t)return b;}
+  if(IMP_ALIAS[t])return IMP_ALIAS[t];
+  for(const k in IMP_ALIAS){if(t.indexOf(k)>=0)return IMP_ALIAS[k];}
+  for(const b of BANQUES){const nb=impNorm(b);if(nb!=='AUTRE'&&nb.length>3&&(t.indexOf(nb)>=0||nb.indexOf(t)>=0))return b;}
+  return null;
+}
+function impDate(s){
+  s=(s||'').trim(); if(!s)return '';
+  let m=s.match(/^(\d{1,2})[\/\.\-](\d{1,2})[\/\.\-](\d{2,4})$/);
+  if(m){let y=m[3];if(y.length===2)y='20'+y;return y+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[1]).slice(-2);}
+  m=s.match(/^(\d{4})[\-\/](\d{1,2})[\-\/](\d{1,2})$/);
+  if(m)return m[1]+'-'+('0'+m[2]).slice(-2)+'-'+('0'+m[3]).slice(-2);
+  return '';
+}
+function impMontant(s){
+  const v=parseFloat((s||'').toString().replace(/[^\d,.-]/g,'').replace(',','.'));
+  return isNaN(v)?0:v;
+}
+
+// Le chèque porte le nom du TIREUR, souvent le parent : on cherche donc
+// aussi du côté du champ « parent » de chaque fiche.
+function impCandidats(txt){
+  const t=impNorm(txt); if(!t)return [];
+  const exact=[],partiels=[];
+  adherents.forEach(a=>{
+    const nom=impNorm(a.nom),pre=impNorm(a.prenom),par=impNorm(a.parent);
+    if(t===nom+' '+pre||t===pre+' '+nom){exact.push(a);return;}
+    if(nom&&t.indexOf(nom)>=0&&pre&&t.indexOf(pre)>=0){exact.push(a);return;}
+    if(par&&t===par){partiels.push(a);return;}
+    if(nom&&t.indexOf(nom)>=0){partiels.push(a);return;}
+    if(par&&(t.indexOf(par)>=0||par.indexOf(t)>=0)){partiels.push(a);}
+  });
+  return exact.length?exact:partiels;
+}
+
+// Un même n° de chèque déjà enregistré ailleurs = très probablement un
+// double import. On avertit, on ne bloque pas : deux banques peuvent
+// théoriquement émettre le même numéro.
+function impDoublon(l){
+  if(!l.numero)return null;
+  for(const a of adherents){
+    if(!a.cheques)continue;
+    for(const c of a.cheques){
+      if((c.numero||'').toString().replace(/\s/g,'')===l.numero)return a;
+    }
+  }
+  return null;
+}
+
+function impFichier(input){
+  const f=input.files&&input.files[0]; if(!f)return;
+  const r=new FileReader();
+  r.onload=function(){document.getElementById('imp_txt').value=r.result;impAnalyser();};
+  r.readAsText(f,'UTF-8');
+  input.value='';
+}
+function impReset(){
+  impLignes=[];document.getElementById('imp_txt').value='';
+  document.getElementById('imp-result').innerHTML='';
+}
+
+function impAnalyser(){
+  const txt=document.getElementById('imp_txt').value||'';
+  const lignes=txt.split(/\r?\n/).map(x=>x.trim()).filter(x=>x.length);
+  if(!lignes.length){toast('Rien à analyser — collez d’abord les chèques',true);return;}
+  impLignes=[];
+  lignes.forEach(function(src,i){
+    let sep=';';
+    if(src.indexOf(';')<0)sep=(src.indexOf('\t')>=0)?'\t':((src.indexOf(',')>=0)?',':';');
+    const c=src.split(sep).map(x=>x.trim());
+    const t0=impNorm(c[0]);
+    if(i===0&&(t0==='NOM'||t0==='ADHERENT'||t0==='NOM PRENOM'))return;   // en-tête
+    const cand=impCandidats(c[0]);
+    const bq=impBanque(c[4]);
+    impLignes.push({
+      id:'L'+i,src:src,nom:c[0]||'',libelle:c[1]||'',montant:impMontant(c[2]),
+      numero:(c[3]||'').replace(/\s/g,''),
+      banque:(bq===null?'Autre':bq),banqueBrute:c[4]||'',banqueOK:(bq!==null),
+      date:impDate(c[5]),dateBrute:c[5]||'',
+      cible:(cand.length===1?cand[0].n:null),nbCand:cand.length,
+      ok:(cand.length===1)
+    });
+  });
+  if(!impLignes.length){toast('Aucune ligne exploitable',true);return;}
+  renderImport();
+}
+
+function impSet(id,champ,val){
+  const l=impLignes.find(x=>x.id===id); if(!l)return;
+  if(champ==='cible'){l.cible=val?parseInt(val):null;if(!l.cible)l.ok=false;}
+  else if(champ==='ok'){l.ok=!!val;}
+  else if(champ==='montant'){l.montant=impMontant(val);}
+  else l[champ]=val;
+  if(champ!=='ok')renderImport();
+}
+
+function renderImport(){
+  const box=document.getElementById('imp-result');
+  if(!impLignes.length){box.innerHTML='';return;}
+  const fiches=adherents.slice().sort((x,y)=>(x.nom+' '+x.prenom).localeCompare(y.nom+' '+y.prenom));
+  const selBanques='<option value=""></option>'+BANQUES.map(b=>'<option value="'+impEsc(b)+'">'+impEsc(b)+'</option>').join('');
+
+  let nbOK=0,total=0,nbPb=0;
+  const rows=impLignes.map(function(l){
+    const dbl=impDoublon(l);
+    let st='',cls='';
+    if(!l.cible){st=(l.nbCand===0?'Fiche introuvable':l.nbCand+' fiches possibles');cls='imp-bad';}
+    else if(!l.montant){st='Montant manquant';cls='imp-bad';}
+    else if(dbl){st='N° déjà enregistré ('+impEsc(dbl.nom)+')';cls='imp-warn';}
+    else if(!l.banqueOK&&l.banqueBrute){st='Banque non reconnue';cls='imp-warn';}
+    else if(!l.date){st='Sans date de remise';cls='imp-warn';}
+    else{st='Prêt';cls='imp-ok';}
+    const applicable=!!(l.cible&&l.montant);
+    if(!applicable){nbPb++;l.ok=false;}
+    if(l.ok&&applicable){nbOK++;total+=l.montant;}
+    const opts='<option value="">— choisir une fiche —</option>'+fiches.map(function(x){
+      return '<option value="'+x.n+'"'+(x.n===l.cible?' selected':'')+'>'+impEsc(x.nom+' '+x.prenom+(x.parent?' — '+x.parent:''))+'</option>';
+    }).join('');
+    const bqOpts=selBanques.replace('value="'+impEsc(l.banque)+'"','value="'+impEsc(l.banque)+'" selected');
+    return '<tr class="'+(l.ok?'':'imp-off')+'">'
+      +'<td><input type="checkbox"'+(l.ok?' checked':'')+(applicable?'':' disabled')+' onchange="impSet(\''+l.id+'\',\'ok\',this.checked);renderImport()"></td>'
+      +'<td><div>'+impEsc(l.nom)+'</div><div class="imp-src">'+impEsc(l.src.slice(0,60))+'</div></td>'
+      +'<td style="min-width:190px"><select onchange="impSet(\''+l.id+'\',\'cible\',this.value)">'+opts+'</select></td>'
+      +'<td style="width:100px"><input value="'+impEsc(l.libelle)+'" placeholder="T1, Forfait…" onchange="impSet(\''+l.id+'\',\'libelle\',this.value)"></td>'
+      +'<td style="width:90px"><input type="number" min="0" value="'+(l.montant||'')+'" onchange="impSet(\''+l.id+'\',\'montant\',this.value)"></td>'
+      +'<td style="width:110px"><input value="'+impEsc(l.numero)+'" placeholder="N°" onchange="impSet(\''+l.id+'\',\'numero\',this.value)"></td>'
+      +'<td style="min-width:150px"><select onchange="impSet(\''+l.id+'\',\'banque\',this.value)">'+bqOpts+'</select></td>'
+      +'<td style="width:140px"><input type="date" value="'+impEsc(l.date)+'" onchange="impSet(\''+l.id+'\',\'date\',this.value)"></td>'
+      +'<td><span class="imp-st '+cls+'">'+st+'</span></td>'
+      +'</tr>';
+  }).join('');
+
+  let h='<div class="card"><div class="card-title">2 · Vérifier le rapprochement</div>';
+  h+='<div class="imp-bilan">'
+    +'<div class="imp-kpi"><div class="k">Lignes lues</div><div class="v">'+impLignes.length+'</div></div>'
+    +'<div class="imp-kpi"><div class="k">À importer</div><div class="v">'+nbOK+'</div></div>'
+    +'<div class="imp-kpi"><div class="k">À corriger</div><div class="v" style="color:'+(nbPb?'var(--red)':'var(--navy)')+'">'+nbPb+'</div></div>'
+    +'<div class="imp-kpi"><div class="k">Montant</div><div class="v">'+total+' €</div></div>'
+    +'</div>';
+  h+='<div class="imp-wrap"><table class="imp-tbl"><thead><tr>'
+    +'<th></th><th>Lu dans le fichier</th><th>Fiche de l’adhérent</th><th>Libellé</th><th>Montant</th><th>N° chèque</th><th>Banque</th><th>Remise le</th><th>État</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div>';
+  h+='</div>';
+
+  h+=impBilanFiches();
+
+  h+='<div class="card"><div class="card-title">4 · Appliquer</div>'
+    +'<div style="font-size:12.5px;color:var(--text2);line-height:1.55;margin-bottom:11px">'
+    +'Les chèques cochés seront ajoutés aux fiches correspondantes. '
+    +'Le suivi des encaissements n’est <strong>pas</strong> modifié : un chèque reçu n’est pas un chèque encaissé, vous continuerez à le cocher vous-même dans <em>Paiements</em> le jour de la remise.'
+    +'</div>'
+    +'<button class="btn btn-success" onclick="impAppliquer()"'+(nbOK?'':' disabled')+'>✅ Ajouter '+nbOK+' chèque'+(nbOK>1?'s':'')+' aux fiches</button>'
+    +'</div>';
+  box.innerHTML=h;
+}
+
+// Contrôle de cohérence : ce que la personne doit, ce qu'elle a déjà déposé,
+// ce que cet import ajoute. C'est ici qu'on attrape un chèque au mauvais tarif.
+function impBilanFiches(){
+  const par={};
+  impLignes.filter(l=>l.ok&&l.cible&&l.montant).forEach(function(l){
+    (par[l.cible]=par[l.cible]||[]).push(l);
+  });
+  const ns=Object.keys(par);
+  if(!ns.length)return '';
+  let rows='';
+  ns.forEach(function(n){
+    const a=adherents.find(x=>x.n==n); if(!a)return;
+    const c=calcTarif(actsOf(a),nbEnfantsFoyer(a.foyer,a.n,a.age));
+    const deja=(a.cheques||[]).reduce((s,x)=>s+(parseFloat(x.montant)||0),0);
+    const ajout=par[n].reduce((s,x)=>s+x.montant,0);
+    const apres=deja+ajout, ecart=apres-c.total;
+    let st,cls;
+    if(Math.abs(ecart)<1){st='Compte juste';cls='imp-ok';}
+    else if(ecart<0){st='Reste '+Math.round(-ecart)+' €';cls='imp-warn';}
+    else{st='Trop-perçu '+Math.round(ecart)+' €';cls='imp-bad';}
+    rows+='<tr><td><strong>'+impEsc(a.nom+' '+a.prenom)+'</strong><div class="imp-src">'+impEsc(actsLabel(a))+(c.motif?' · remise '+Math.round(c.taux*100)+' % ('+impEsc(c.motif)+')':'')+'</div></td>'
+      +'<td>'+c.total+' €</td><td>'+Math.round(deja)+' €</td><td><strong>+ '+Math.round(ajout)+' €</strong> ('+par[n].length+')</td>'
+      +'<td>'+Math.round(apres)+' €</td><td><span class="imp-st '+cls+'">'+st+'</span></td></tr>';
+  });
+  return '<div class="card"><div class="card-title">3 · Ce que ça donnera, fiche par fiche</div>'
+    +'<div class="imp-wrap"><table class="imp-tbl" style="min-width:640px"><thead><tr>'
+    +'<th>Adhérent</th><th>Doit</th><th>Déjà déposé</th><th>Cet import</th><th>Total après</th><th>Écart</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table></div></div>';
+}
+
+function impAppliquer(){
+  const sel=impLignes.filter(l=>l.ok&&l.cible&&l.montant);
+  if(!sel.length){toast('Aucune ligne à importer',true);return;}
+  if(!confirm('Ajouter '+sel.length+' chèque(s) aux fiches ?\n\nL’état actuel sera conservé : vous pourrez annuler cet import.'))return;
+  try{
+    localStorage.setItem('musique_import_undo',JSON.stringify({d:Date.now(),saison:getActiveSaison().label,adherents:adherents}));
+  }catch(e){}
+  let nb=0;
+  sel.forEach(function(l){
+    const a=adherents.find(x=>x.n===l.cible); if(!a)return;
+    if(!Array.isArray(a.cheques))a.cheques=[];
+    a.cheques.push({libelle:l.libelle,montant:l.montant,numero:l.numero,banque:l.banque,dateEncaissement:l.date});
+    if(!a.mode)a.mode='Chèque';       // mode vide seulement — on n'écrase jamais un mode déjà choisi
+    nb++;
+  });
+  saveData();
+  impReset();
+  toast('✅ '+nb+' chèque'+(nb>1?'s':'')+' ajouté'+(nb>1?'s':'')+' aux fiches');
+  renderAlerts();
+  showPage('liste');
+}
+
+function impAnnuler(){
+  let sv=null;
+  try{sv=JSON.parse(localStorage.getItem('musique_import_undo')||'null');}catch(e){}
+  if(!sv||!sv.adherents){toast('Aucun import à annuler',true);return;}
+  const q=new Date(sv.d).toLocaleString('fr-FR');
+  if(sv.saison&&sv.saison!==getActiveSaison().label){
+    toast('La sauvegarde concerne la saison '+sv.saison,true);return;
+  }
+  if(!confirm('Revenir à l’état enregistré le '+q+' ?\n\nATTENTION : toute modification faite depuis (inscriptions, paiements) sera perdue.'))return;
+  adherents=sv.adherents;
+  saveData();
+  localStorage.removeItem('musique_import_undo');
+  toast('↩️ Import annulé — état du '+q+' restauré');
+  renderAlerts();showPage('liste');
+}
+
 // ─── NAVIGATION ───────────────────────────────────────────
 function showPage(id){
   document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
@@ -859,6 +1167,7 @@ function showPage(id){
   if(id==='mails')genMails();
   if(id==='recus')renderRecus();
   if(id==='bordereau')renderBordereau();
+  if(id==='import')renderImport();
   renderAlerts();
   document.querySelector('.sidebar').classList.remove('open');
 }
