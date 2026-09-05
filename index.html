@@ -190,6 +190,12 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .toast.show { opacity: 1; transform: translateY(0); }
 .toast.err { background: var(--red); }
 
+/* ─── Bandeau d'annulation de suppression (2026-09-05) ─── */
+.undo-toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(8px); background: var(--navy); color: #fff; padding: 11px 14px 11px 18px; border-radius: 8px; font-size: 13px; font-weight: 500; opacity: 0; transition: .25s; pointer-events: none; z-index: 1000; box-shadow: 0 6px 24px rgba(0,0,0,.28); display: flex; align-items: center; gap: 14px; max-width: 92vw; }
+.undo-toast.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
+.undo-toast button { background: #fff; color: var(--navy); border: none; border-radius: 6px; padding: 5px 14px; font-size: 12.5px; font-weight: 600; cursor: pointer; font-family: inherit; white-space: nowrap; }
+.undo-toast button:hover { background: var(--sand); }
+
 /* GMAIL BADGE */
 .gmail-btn { font-size: 11px; padding: 5px 12px; border-radius: 20px; font-weight: 500; cursor: pointer; border: none; font-family: 'DM Sans', sans-serif; display: inline-flex; align-items: center; gap: 5px; }
 .gmail-on { background: var(--green-light); color: var(--green); }
@@ -644,6 +650,7 @@ Saison {{SAISON_LABEL}}</textarea></div>
 </div>
 
 <div class="toast" id="toast"></div>
+<div class="undo-toast" id="undo-toast"></div>
 
 <!-- OVERLAY DOCUMENT IMPRIMABLE -->
 <div id="doc-overlay">
@@ -869,6 +876,7 @@ function migrateChantRename(){
 migrateChantRename();
 let adherents=loadData();
 let paiementStatus=loadPS();
+let lastDeleted=null;   // derniere fiche supprimee, pour le bouton Annuler
 let mailHistorique=loadHistorique();
 let chequesForm=[];
 let mailsList=[];
@@ -1559,20 +1567,73 @@ function renderListe(){
       <td style="font-size:12px;color:var(--text2)">${a.email||a.parent||a.tel||'—'}</td>
       <td><span class="badge badge-${a.paie.toLowerCase()}">${a.paie==='OUI'?'Payé ✓':a.paie==='NON'?'En attente':'Partiel'}</span></td>
       <td style="font-weight:500">${total} €</td>
-      <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="editAdherent(${a.n})" title="Modifier la fiche">✏️</button><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px" onclick="deleteAdherent(${a.n})">✕</button></td>
+      <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="editAdherent(${a.n})" title="Modifier la fiche">✏️</button><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px;margin-left:18px" onclick="deleteAdherent(${a.n})" title="Supprimer définitivement cette fiche">🗑️</button></td>
     </tr>`;}).join('');
 }
+// Suppression d'une fiche — sécurisée le 2026-09-05.
+// Une fiche a été perdue le 05/09 parce que la croix ✕ était collée au crayon
+// et que la question ne disait pas QUI on effaçait. Trois garde-fous :
+// le nom dans la question, une 2e confirmation quand des chèques sont en jeu,
+// et un bouton « Annuler » qui remet la fiche entière (la base est en ligne,
+// il n'y a ni corbeille ni historique pour rattraper autrement).
 function deleteAdherent(n){
-  if(!confirm('Supprimer cet adhérent ?'))return;
   const sup=adherents.find(a=>a.n===n);
-  const foyer=sup?sup.foyer:null;
+  if(!sup){toast('Fiche introuvable',true);return;}
+  const qui=`${sup.prenom} ${sup.nom}`;
+  const nb=(sup.cheques||[]).length;
+  const somme=(sup.cheques||[]).reduce((t,c)=>t+(parseFloat(c.montant)||0),0);
+
+  let msg=`Supprimer définitivement la fiche de ${qui}`;
+  if(!isNaN(sup.age))msg+=` (${sup.age} ans, ${actsLabel(sup)})`;
+  msg+=' ?';
+  if(nb)msg+=`\n\nElle contient ${nb} chèque${nb>1?'s':''} pour ${Math.round(somme)} €.`;
+  msg+='\n\nCette action est irréversible.';
+  if(!confirm(msg))return;
+
+  // 2e confirmation dès qu'il y a de l'argent en jeu
+  if(nb&&!confirm(`Confirmez-vous ?\n\nLes ${nb} chèque${nb>1?'s':''} de ${qui} (${Math.round(somme)} €) disparaîtront du suivi des paiements et du bordereau de remise.`))return;
+
+  const foyer=sup.foyer;
+  lastDeleted={a:JSON.parse(JSON.stringify(sup)),
+               ps:paiementStatus[n]?JSON.parse(JSON.stringify(paiementStatus[n])):null,
+               quand:Date.now()};
+  try{localStorage.setItem('musique_delete_undo',JSON.stringify(lastDeleted));}catch(e){}
+
   adherents=adherents.filter(a=>a.n!==n);
   if(editingN===n)resetForm();
   saveData();renderListe();renderAlerts();
   document.getElementById('nb-inscrits').textContent=adherents.length;
-  toast('Adhérent supprimé');
+  showUndoDelete(qui);
   // un départ peut faire perdre la remise fratrie aux frères et sœurs restants
   if(foyer)setTimeout(()=>proposerRecalculFoyer(foyer,n),300);
+}
+
+function showUndoDelete(qui){
+  const t=document.getElementById('undo-toast');
+  if(!t){toast('Fiche supprimée');return;}
+  t.innerHTML=`<span>🗑️ Fiche de ${esc(qui)} supprimée</span><button type="button" onclick="undoDelete()">↩️ Annuler</button>`;
+  t.classList.add('show');
+  clearTimeout(window._undoTimer);
+  window._undoTimer=setTimeout(()=>t.classList.remove('show'),15000);
+}
+
+function undoDelete(){
+  let d=lastDeleted;
+  if(!d){try{d=JSON.parse(localStorage.getItem('musique_delete_undo')||'null');}catch(e){}}
+  if(!d||!d.a){toast('Aucune suppression à annuler',true);return;}
+  const a=d.a;
+  // si le numéro a été repris entre-temps, on en attribue un neuf
+  if(adherents.some(x=>x.n===a.n))a.n=adherents.length?Math.max(...adherents.map(x=>x.n))+1:1;
+  adherents.push(a);
+  if(d.ps)paiementStatus[a.n]=d.ps;
+  lastDeleted=null;
+  try{localStorage.removeItem('musique_delete_undo');}catch(e){}
+  saveData();savePS();
+  const t=document.getElementById('undo-toast');if(t)t.classList.remove('show');
+  renderListe();renderAlerts();
+  document.getElementById('nb-inscrits').textContent=adherents.length;
+  toast(`↩️ Fiche de ${a.prenom} ${a.nom} restaurée`);
+  if(a.foyer)setTimeout(()=>proposerRecalculFoyer(a.foyer,a.n),300);
 }
 
 // ─── PAIEMENTS ────────────────────────────────────────────
@@ -2481,6 +2542,11 @@ function renderBordereau(){
   if(!list.length){
     html+='<div class="card"><div style="text-align:center;padding:30px;color:var(--text2)">Aucun chèque à afficher</div></div>';
   } else {
+    html+=`<div style="display:flex;gap:8px;align-items:center;margin:14px 0 10px;flex-wrap:wrap">
+      <button class="btn btn-outline" style="padding:6px 13px;font-size:12.5px" onclick="bordToutCocher()">☑️ Tout cocher</button>
+      <button class="btn btn-outline" style="padding:6px 13px;font-size:12.5px" onclick="bordToutDecocher()">☐ Tout décocher</button>
+      <span style="font-size:12px;color:var(--text2)">Un chèque déjà remis n'est jamais coché automatiquement.</span>
+    </div>`;
     html+=`<div class="card" style="padding:0;overflow:hidden"><table class="tbl"><thead><tr><th style="width:32px"></th><th>Adhérent</th><th>Émetteur (tireur)</th><th>Banque</th><th>N° chèque</th><th>Encaissement</th><th class="num" style="text-align:right">Montant</th><th>État</th></tr></thead><tbody>`;
     list.forEach(x=>{
       const a=x.a,c=x.c;
@@ -2522,6 +2588,25 @@ function renderBordereau(){
   updateBordTotal();
 }
 function toggleBordChq(key,val){ if(val)bordSelection.add(key); else bordSelection.delete(key); updateBordTotal(); }
+// Tout cocher / tout décocher (ajouté le 2026-09-05, demande de PI)
+// On ne coche JAMAIS un chèque déjà remis : il partirait une seconde fois
+// sur un bordereau, et la banque le rejetterait.
+function bordToutCocher(){
+  let n=0;
+  allCheques().forEach(x=>{
+    if(chequesRemis[x.key])return;
+    if(!bordSelection.has(x.key)){bordSelection.add(x.key);}
+    n++;
+  });
+  renderBordereau();
+  if(n)toast(`☑️ ${n} chèque${n>1?'s':''} coché${n>1?'s':''}`);
+  else toast('Aucun chèque à déposer — tout est déjà remis',true);
+}
+function bordToutDecocher(){
+  if(!bordSelection.size){toast('Aucun chèque coché',true);return;}
+  bordSelection.clear();
+  renderBordereau();
+}
 function updateBordTotal(){
   let sum=0,cnt=0;
   allCheques().forEach(x=>{ if(bordSelection.has(x.key)){ sum+=parseFloat(x.c.montant)||0; cnt++; } });
