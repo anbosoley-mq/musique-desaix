@@ -309,6 +309,41 @@ body.editing .page-header h1::after { content: ' ✏️'; }
 .imp-src { font-size: 11px; color: var(--text3); font-family: ui-monospace, monospace; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 230px; }
 .imp-tbl td:nth-child(2) { min-width: 180px; max-width: 240px; }
 @media (max-width: 760px) { .imp-bilan { grid-template-columns: repeat(2, 1fr); } }
+
+/* ─── Planning hebdomadaire ─── */
+.pl-bar { display: flex; gap: 9px; flex-wrap: wrap; align-items: center; margin-bottom: 14px; }
+.pl-grid { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 6px; }
+.pl-col { flex: 1 1 0; min-width: 120px; }
+.pl-col.pl-hours { flex: 0 0 46px; min-width: 46px; }
+.pl-hdr { height: 28px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 600; color: var(--text2); }
+.pl-canvas { position: relative; border-radius: 6px; border: 1px solid var(--border); background-color: var(--card); background-image: repeating-linear-gradient(to bottom, var(--border) 0 1px, transparent 1px 68px), repeating-linear-gradient(to bottom, var(--bg2) 0 1px, transparent 1px 34px); }
+.pl-hcanvas { position: relative; }
+.pl-h { position: absolute; right: 5px; font-size: 10px; color: var(--text3); transform: translateY(-5px); }
+.pl-block { position: absolute; border-radius: 7px; padding: 4px 6px; overflow: hidden; cursor: pointer; border-left: 3px solid; box-shadow: 0 1px 3px rgba(26,58,92,.13); transition: box-shadow .12s, transform .12s; }
+.pl-block:hover { box-shadow: 0 3px 10px rgba(26,58,92,.22); transform: translateY(-1px); }
+.pl-block.sel { outline: 2px solid var(--navy); outline-offset: 1px; }
+.pl-b-t { font-size: 11px; font-weight: 600; line-height: 1.25; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-b-s { font-size: 10px; color: var(--text2); line-height: 1.35; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pl-full { color: var(--red); font-weight: 600; }
+.pl-libre { color: var(--green); font-weight: 600; }
+.pl-empty { padding: 26px 14px; text-align: center; color: var(--text2); font-size: 13px; }
+.pl-liste { display: none; }
+.pl-jour { margin-bottom: 14px; }
+.pl-jour h4 { font-size: 11px; text-transform: uppercase; letter-spacing: .07em; color: var(--text2); margin-bottom: 7px; }
+.pl-item { display: block; padding: 9px 11px; border: 1px solid var(--border); border-left-width: 3px; border-radius: 7px; margin-bottom: 6px; cursor: pointer; }
+.pl-occ { display: flex; align-items: center; gap: 9px; padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.pl-occ:last-child { border-bottom: none; }
+.pl-slot { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--navy); min-width: 54px; font-size: 12px; }
+.pl-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 0 12px; }
+.pl-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; user-select: none; background: var(--card); }
+.pl-chip.on { border-color: var(--navy); background: var(--blue-light); color: #0C447C; font-weight: 600; }
+.pl-alerte { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: #FFF5F5; border: 1px solid var(--red-light); color: #7A0A0A; margin-bottom: 10px; }
+.pl-modal { position: fixed; inset: 0; background: rgba(20,30,50,.5); display: none; align-items: center; justify-content: center; z-index: 1200; padding: 16px; }
+.pl-modal.show { display: flex; }
+.pl-modal-box { background: var(--card); border-radius: 12px; max-width: 540px; width: 100%; max-height: 88vh; overflow: auto; padding: 22px; box-shadow: 0 14px 44px rgba(0,0,0,.28); }
+.pl-modal-titre { font-family: 'DM Serif Display', serif; font-size: 21px; color: var(--navy); margin-bottom: 3px; }
+@media (max-width: 760px) { .pl-grid { display: none; } .pl-liste { display: block; } }
+
 </style>
 </head>
 <body>
@@ -340,6 +375,8 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <div class="nav-section">Inscriptions</div>
     <button class="nav-item active" onclick="nouvelleInscription()">✏️ &nbsp;Nouveau inscrit</button>
     <button class="nav-item" onclick="showPage('liste')">📋 &nbsp;Liste <span class="badge" id="nb-inscrits">0</span></button>
+    <div class="nav-section">Planning</div>
+    <button class="nav-item" onclick="showPage('planning')">📅 &nbsp;Planning <span class="badge" id="nb-planning-badge" style="display:none">0</span></button>
     <div class="nav-section">Gestion</div>
     <button class="nav-item" onclick="showPage('paiements')">💳 &nbsp;Paiements</button>
     <button class="nav-item" onclick="showPage('mails')">📨 &nbsp;Mails <span class="badge" id="nb-mails-badge">0</span></button>
@@ -452,6 +489,15 @@ body.editing .page-header h1::after { content: ' ✏️'; }
       </div>
       <div id="cheques_list"></div>
       <div class="cheque-total" id="cheque_total"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Disponibilités</div>
+    <div class="field">
+      <label>Jours et heures souhaités <span style="font-weight:400;color:var(--text3)">— repris par le planning</span></label>
+      <input type="text" id="f_dispo" placeholder="Ex. : lundi 17h00   ·   mercredi après-midi   ·   pas le vendredi">
+      <div style="font-size:12px;color:var(--text3);margin-top:5px">Écrivez comme vous parlez : le planning y lit les jours, les heures, « matin », « après-midi » et les « pas le… » pour proposer le bon créneau. Laissez vide si la famille n'a pas de contrainte.</div>
     </div>
   </div>
 
@@ -585,6 +631,11 @@ Saison {{SAISON_LABEL}}</textarea></div>
 </div>
 
 <!-- PAGE RECAP -->
+<div class="page" id="page-planning">
+  <div class="page-header"><h1>Planning de la semaine</h1><p>Les créneaux de la section, et les élèves qui y sont placés</p></div>
+  <div id="planning-content"></div>
+</div>
+
 <div class="page" id="page-recap-global">
   <div class="page-header"><h1>Récapitulatif</h1><p>Activité Musique Desaix · <span id="recap-saison-label">Saison …</span></p></div>
   <div id="recap-global-content"></div>
@@ -648,6 +699,8 @@ Saison {{SAISON_LABEL}}</textarea></div>
 
 </main>
 </div>
+
+<div class="pl-modal" id="pl-modal" onclick="if(event.target===this)plCloseModal()"><div class="pl-modal-box" id="pl-modal-box"></div></div>
 
 <div class="toast" id="toast"></div>
 <div class="undo-toast" id="undo-toast"></div>
@@ -875,6 +928,7 @@ function migrateChantRename(){
 }
 migrateChantRename();
 let adherents=loadData();
+let creneaux=loadCreneaux();   // planning de la semaine
 let paiementStatus=loadPS();
 let lastDeleted=null;   // derniere fiche supprimee, pour le bouton Annuler
 let mailHistorique=loadHistorique();
@@ -1176,6 +1230,8 @@ function showPage(id){
   if(id==='recus')renderRecus();
   if(id==='bordereau')renderBordereau();
   if(id==='import')renderImport();
+  if(id==='planning')renderPlanning();
+  plMajBadge();
   renderAlerts();
   document.querySelector('.sidebar').classList.remove('open');
 }
@@ -1455,6 +1511,7 @@ function editAdherent(n){
   document.getElementById('f_t1').value=a.t1||0;
   document.getElementById('f_t2').value=a.t2||0;
   document.getElementById('f_t3').value=a.t3||0;
+  document.getElementById('f_dispo').value=a.dispo||'';
   document.getElementById('f_obs').value=a.obs||'';
   // bloc aide
   document.getElementById('f_aide_montant').value=a.aide?a.aide.montant:0;
@@ -1501,8 +1558,15 @@ function addAdherent(){
     t3:parseInt(document.getElementById('f_t3').value)||0,
     cheques:(mode==='Chèque'||(estAide(mode)&&document.getElementById('f_aide_solde').value==='Chèque'))?chequesForm.map(c=>({libelle:c.libelle,montant:parseFloat(c.montant)||0,numero:c.numero,banque:c.banque,dateEncaissement:c.dateEncaissement})):[],
     aide:estAide(mode)?{type:mode,montant:parseFloat(document.getElementById('f_aide_montant').value)||0,ref:document.getElementById('f_aide_ref').value.trim(),solde:document.getElementById('f_aide_solde').value}:null,
+    dispo:document.getElementById('f_dispo').value.trim(),
     obs:document.getElementById('f_obs').value.trim()
   };
+  // Le planning suit la fiche : on garde les créneaux déjà attribués, en oubliant
+  // ceux des activités qui viennent d'être retirées de la fiche.
+  if(ancienne&&ancienne.creneaux){
+    a.creneaux={};
+    actsForm.forEach(act=>{if(ancienne.creneaux[act])a.creneaux[act]=ancienne.creneaux[act];});
+  }
   const foyerTouche=a.foyer;
   if(edition){
     adherents[adherents.findIndex(x=>x.n===n)]=a;
@@ -1522,6 +1586,9 @@ function addAdherent(){
   showPage('liste');
   if(foyerTouche)setTimeout(()=>proposerRecalculFoyer(foyerTouche,n),350);
   if(!edition&&docSettings.autoRecu&&a.cheques&&a.cheques.length){setTimeout(()=>openRecu(a.n),300);}
+  // Placement proposé (jamais imposé) — sauf si un reçu s'ouvre déjà par-dessus :
+  // l'élève reste alors visible dans « en attente » sur la page Planning.
+  else if(creneaux.length)setTimeout(()=>proposerPlacement(a.n),450);
 }
 
 // ─── Recalcul du foyer : jamais silencieux ─────────────────
@@ -1706,6 +1773,793 @@ function instrTable(list){
   });
   return{rows,gAdh,gT1,gT2,gT3,gTot};
 }
+// ═══════════════════════════════════════════════════════════
+// PLANNING HEBDOMADAIRE  (créneaux + placement des adhérents)
+// ───────────────────────────────────────────────────────────
+// Un CRÉNEAU est une plage de la semaine tenue par UN professeur, ouverte à une
+// ou plusieurs disciplines (« Guitare & Piano » = un seul créneau) :
+//   {id, acts:[], jour:1..6, debut:'16:00', fin:'20:00',
+//    mode:'tranches'|'collectif', duree:60, capacite:12, caps:{GUITARE:5,…}, prof, salle}
+//
+// mode 'tranches'  : la plage est découpée en tranches (1 h par défaut). Chaque
+//                    tranche est un petit groupe. Sa discipline se fixe au premier
+//                    élève placé — un professeur ne fait pas guitare ET piano dans
+//                    la même heure — et sa capacité suit la discipline (5 en
+//                    guitare, 4 en piano). Une tranche vidée redevient disponible
+//                    pour n'importe quelle discipline du créneau.
+// mode 'collectif' : un seul groupe sur toute la plage, capacité fixe.
+//
+// Deux professeurs à la même heure = deux créneaux : la grille les met côte à côte.
+//
+// L'AFFECTATION est stockée SUR LA FICHE de l'adhérent :
+//   a.creneaux = { GUITARE:{c:'id-du-creneau', h:'16:00'} }   (h=null en collectif)
+// Elle suit donc la fiche partout — édition, archivage, suppression — sans second
+// jeu de données à tenir synchronisé.
+//
+// Le placement est PROPOSÉ, jamais imposé : l'app désigne la première place libre,
+// l'utilisateur valide ou choisit autre chose. Un algorithme ignore qu'un enfant a
+// foot le mercredi ou qu'un débutant n'entre pas dans un groupe avancé.
+// ═══════════════════════════════════════════════════════════
+const JOURS=[{n:1,l:'Lundi'},{n:2,l:'Mardi'},{n:3,l:'Mercredi'},{n:4,l:'Jeudi'},{n:5,l:'Vendredi'},{n:6,l:'Samedi'}];
+const PL_ROW=34;                        // hauteur d'une demi-heure dans la grille, en pixels
+const PL_DUREES=[30,45,60,90];
+// Nombre d'élèves qu'un professeur prend en même temps, par discipline.
+const CAP_ACT={GUITARE:5,PIANO:4,PERCUSSIONS:4,CHANT:6};
+const PL_COUL={GUITARE:{bg:'#D6E4F0',fg:'#0C447C'},PIANO:{bg:'#E1F5EE',fg:'#085041'},
+               CHANT:{bg:'#FAEEDA',fg:'#7B4F00'},PERCUSSIONS:{bg:'#FAECE7',fg:'#712B13'}};
+// Les horaires affichés par la section (« La semaine à la section »).
+// Proposés en un clic quand le planning est vide — modifiables ensuite comme les autres.
+const PL_MODELE=[
+  {jour:1,debut:'16:00',fin:'20:00',acts:['GUITARE','PIANO'],mode:'tranches', duree:60,  prof:'Jerry'},
+  {jour:3,debut:'10:00',fin:'12:00',acts:['PERCUSSIONS'],    mode:'tranches', duree:60,  prof:'Olivier'},
+  {jour:3,debut:'13:30',fin:'17:30',acts:['GUITARE','PIANO'],mode:'tranches', duree:60,  prof:'Jerry'},
+  {jour:4,debut:'17:00',fin:'19:00',acts:['PERCUSSIONS'],    mode:'tranches', duree:60,  prof:'Olivier'},
+  {jour:5,debut:'14:00',fin:'17:00',acts:['GUITARE','PIANO'],mode:'tranches', duree:60,  prof:'Jerry'},
+  {jour:6,debut:'09:00',fin:'13:00',acts:['CHANT'],          mode:'tranches', duree:60,  prof:'Alice'}
+];
+
+function loadCreneaux(){
+  try{
+    const d=localStorage.getItem(`musique_saison_${getActiveSaison().label}_creneaux`);
+    return d?JSON.parse(d):[];
+  }catch(e){return[];}
+}
+function saveCreneaux(){
+  try{localStorage.setItem(`musique_saison_${getActiveSaison().label}_creneaux`,JSON.stringify(creneaux));}catch(e){}
+  cloudSave();
+}
+
+// ─── Petits utilitaires ────────────────────────────────────
+function h2m(s){const p=String(s||'').split(':');return (parseInt(p[0],10)||0)*60+(parseInt(p[1],10)||0);}
+function m2h(m){return String(Math.floor(m/60)).padStart(2,'0')+':'+String(m%60).padStart(2,'0');}
+function fmtH(s){return String(s||'').replace(':','h');}
+function plUid(){return 'cr'+Date.now().toString(36)+Math.random().toString(36).slice(2,6);}
+function jourL(n){const j=JOURS.find(x=>x.n===n);return j?j.l:'?';}
+function actInfo(code){return ACTIVITES.find(x=>x.code===code)||{code,label:code,emoji:''};}
+
+// ─── Lecture d'un créneau ──────────────────────────────────
+function crById(id){return creneaux.find(c=>c.id===id)||null;}
+function crActs(cr){return cr?(Array.isArray(cr.acts)?cr.acts:(cr.act?[cr.act]:[])):[];}
+function crLabel(cr){return crActs(cr).map(c=>actInfo(c).label).join(' & ')||'—';}
+function crEmoji(cr){return crActs(cr).map(c=>actInfo(c).emoji).join('');}
+function crDuree(cr){return Math.max(0,h2m(cr.fin)-h2m(cr.debut));}
+// Capacité d'un groupe de ce créneau pour une discipline donnée
+function capDe(cr,act){
+  if(cr&&cr.mode==='collectif')return Math.max(1,parseInt(cr.capacite,10)||1);
+  if(cr&&cr.caps&&cr.caps[act])return Math.max(1,parseInt(cr.caps[act],10));
+  return Math.max(1,CAP_ACT[act]||1);
+}
+// Heures de début des tranches d'un créneau ('' pour un créneau collectif)
+function crTranches(cr){
+  if(!cr||cr.mode==='collectif')return[];
+  const d=parseInt(cr.duree,10)||60,out=[];
+  for(let t=h2m(cr.debut);t+d<=h2m(cr.fin);t+=d)out.push(m2h(t));
+  return out;
+}
+// Tous les élèves placés sur ce créneau : [{a, act, h}]
+function crOccupants(id){
+  const out=[];
+  adherents.forEach(a=>{
+    const m=affectOf(a);
+    Object.keys(m).forEach(act=>{if(m[act]&&m[act].c===id)out.push({a,act,h:m[act].h||null});});
+  });
+  return out.sort((x,y)=>h2m(x.h)-h2m(y.h)||(x.a.nom||'').localeCompare(y.a.nom||''));
+}
+// État d'une tranche : discipline en cours (ou null si vide), élèves, capacité, places restantes
+function trancheInfo(cr,h){
+  const occ=crOccupants(cr.id).filter(o=>(o.h||null)===(h||null));
+  const act=occ.length?occ[0].act:null;
+  const cap=act?capDe(cr,act):Math.max.apply(null,crActs(cr).map(c=>capDe(cr,c)).concat([1]));
+  return{h:h||null,occ,act,cap,reste:Math.max(0,cap-occ.length)};
+}
+function crGroupes(cr){
+  return cr.mode==='collectif'?[trancheInfo(cr,null)]:crTranches(cr).map(h=>trancheInfo(cr,h));
+}
+function crPlacesTotal(cr){return crGroupes(cr).reduce((s,g)=>s+g.cap,0);}
+function crOccTotal(cr){return crOccupants(cr.id).length;}
+
+// ─── Affectations ──────────────────────────────────────────
+function affectOf(a){return (a&&a.creneaux&&typeof a.creneaux==='object')?a.creneaux:{};}
+function creneauxTries(){return creneaux.slice().sort((a,b)=>a.jour-b.jour||h2m(a.debut)-h2m(b.debut)||h2m(a.fin)-h2m(b.fin));}
+// Places libres pour une discipline : [{cr, h, groupe}]
+// Les groupes DÉJÀ ouverts dans cette discipline viennent en premier — on remplit
+// les heures entamées avant d'en mobiliser une nouvelle.
+function placesLibresPour(act){
+  const ouverts=[],neufs=[];
+  creneauxTries().filter(cr=>crActs(cr).indexOf(act)>=0).forEach(cr=>{
+    crGroupes(cr).forEach(g=>{
+      if(g.act===act){if(g.reste>0)ouverts.push({cr,h:g.h,g});}
+      else if(!g.act){
+        // tranche encore vide : sa capacité est celle de la discipline demandée
+        const cap=capDe(cr,act);
+        neufs.push({cr,h:g.h,g:{h:g.h,occ:[],act:null,cap,reste:cap}});
+      }
+    });
+  });
+  return ouverts.concat(neufs);
+}
+function placeLabel(cr,h,g){
+  const qui=[cr.prof,cr.salle].filter(Boolean).join(' · ');
+  const quand=cr.mode==='collectif'?`${fmtH(cr.debut)}–${fmtH(cr.fin)}`:fmtH(h);
+  const etat=g.act?`${actInfo(g.act).label} ${g.occ.length}/${g.cap}`:`heure libre · jusqu'à ${g.cap}`;
+  return `${jourL(cr.jour)} ${quand} · ${etat}${qui?' · '+qui:''}`;
+}
+// Écrit l'affectation sur la fiche. noSave = placement en série (une seule sauvegarde à la fin).
+function placer(n,act,crId,h,noSave){
+  const a=adherents.find(x=>x.n===n),cr=crById(crId);
+  if(!a||!cr)return false;
+  if(crActs(cr).indexOf(act)<0){toast('Ce créneau n\'accueille pas cette discipline',true);return false;}
+  h=cr.mode==='collectif'?null:h;
+  if(cr.mode!=='collectif'&&(!h||crTranches(cr).indexOf(h)<0)){toast('Cette heure n\'existe pas dans le créneau',true);return false;}
+  const g=trancheInfo(cr,h);
+  const dedans=g.occ.some(o=>o.a.n===n&&o.act===act);
+  if(!dedans){
+    if(g.act&&g.act!==act){toast(`Cette heure est déjà un cours de ${actInfo(g.act).label.toLowerCase()}`,true);return false;}
+    if(g.reste<=0){toast('Ce groupe est complet',true);return false;}
+  }
+  if(!a.creneaux)a.creneaux={};
+  a.creneaux[act]={c:crId,h:h||null};
+  if(!noSave)saveData();
+  return true;
+}
+function retirer(n,act,noSave){
+  const a=adherents.find(x=>x.n===n);
+  if(!a||!a.creneaux)return;
+  delete a.creneaux[act];
+  if(!noSave)saveData();
+}
+// Élèves sans créneau, une entrée par discipline en attente : [{a, act}]
+function nonPlaces(){
+  const out=[];
+  adherents.forEach(a=>{
+    const m=affectOf(a);
+    actsOf(a).forEach(act=>{if(!m[act]||!crById(m[act].c))out.push({a,act});});
+  });
+  return out.sort((x,y)=>x.a.n-y.a.n);
+}
+// Purge les affectations devenues impossibles (créneau supprimé, heure disparue,
+// discipline retirée de la fiche ou du créneau). Retourne le nombre de lignes nettoyées.
+function plNettoyer(){
+  let k=0;
+  adherents.forEach(a=>{
+    if(!a.creneaux)return;
+    const acts=actsOf(a);
+    Object.keys(a.creneaux).forEach(act=>{
+      const aff=a.creneaux[act],cr=aff?crById(aff.c):null;
+      const okAct=acts.indexOf(act)>=0&&cr&&crActs(cr).indexOf(act)>=0;
+      const okH=cr&&(cr.mode==='collectif'||(aff.h&&crTranches(cr).indexOf(aff.h)>=0));
+      if(!okAct||!okH){delete a.creneaux[act];k++;}
+    });
+  });
+  return k;
+}
+
+// ─── Souhaits écrits dans les observations de la fiche ─────
+// L'inscription note souvent « dispo le mercredi après-midi », « plutôt 17h ».
+// On lit ce texte libre pour proposer en priorité un créneau qui lui corresponde.
+// Rien n'est deviné en silence : le souhait détecté est affiché à l'écran, et
+// c'est toujours l'utilisateur qui valide le placement.
+// Analyse d'un morceau de phrase : jours, jours écartés, heures, matin/après-midi.
+function analyseTexte(t){
+  const jours=[],exclus=[];
+  JOURS.forEach(j=>{
+    const nom=j.l.toLowerCase();
+    if(!new RegExp('\\b'+nom).test(t))return;
+    if(new RegExp('(?:pas|sauf|jamais|indisponible|impossible)[^.,;]{0,20}'+nom).test(t))exclus.push(j.n);
+    else jours.push(j.n);
+  });
+  // « 14h30 - 15h30 » est une plage : c'est l'heure de DÉBUT qui compte, pas les deux.
+  const heures=[];
+  const reste=t.replace(/(\d{1,2})\s*h\s*(\d{2})?\s*(?:-|–|—|à|a)\s*(\d{1,2})\s*h\s*(\d{2})?/g,(w,H,M)=>{
+    const x=parseInt(H,10);
+    if(x>=7&&x<=21)heures.push(x*60+(parseInt(M,10)||0));
+    return ' ';
+  });
+  const re=/(\d{1,2})\s*h(?:eures?)?\s*(\d{2})?/g;
+  let m;
+  while((m=re.exec(reste))!==null){
+    const H=parseInt(m[1],10);
+    if(H>=7&&H<=21)heures.push(H*60+(parseInt(m[2],10)||0));
+  }
+  const matin=/\bmatin/.test(t),aprem=/apr[eè]s[\s-]?midi/.test(t);
+  if(!jours.length&&!exclus.length&&!heures.length&&!matin&&!aprem)return null;
+  return{jours,exclus,heures,matin,aprem};
+}
+function fusionV(a,b){
+  if(!a)return b?{jours:b.jours.slice(),exclus:b.exclus.slice(),heures:b.heures.slice(),matin:b.matin,aprem:b.aprem}:null;
+  if(!b)return a;
+  return{jours:a.jours.concat(b.jours),exclus:a.exclus.concat(b.exclus),
+         heures:a.heures.concat(b.heures),matin:a.matin||b.matin,aprem:a.aprem||b.aprem};
+}
+// Lecture d'une fiche. Les familles écrivent « 13h30 (piano) / 14h30 (guitare) » :
+// chaque ligne qui nomme une discipline ne vaut QUE pour elle.
+function voeuFiche(a){
+  // Le champ Disponibilités fait foi. À défaut — fiches saisies avant sa création —
+  // on relit les observations, où les horaires étaient notés jusqu'ici.
+  const dispo=(a&&a.dispo)?String(a.dispo):'';
+  const source=dispo.trim()?'dispo':'obs';
+  const brut=dispo.trim()?dispo:((a&&a.obs)?String(a.obs):'');
+  if(!brut.trim())return null;
+  const parAct={};
+  let global=null,vide=true;
+  brut.split(/[\n;]+/).forEach(seg=>{
+    const bas=seg.toLowerCase().trim();
+    if(!bas)return;
+    const v=analyseTexte(bas);
+    if(!v)return;
+    vide=false;
+    const cibles=ACTIVITES.filter(A=>new RegExp('\\b'+A.label.toLowerCase().replace(/s$/,'')).test(bas)).map(A=>A.code);
+    if(cibles.length)cibles.forEach(c=>{parAct[c]=fusionV(parAct[c],v);});
+    else global=fusionV(global,v);
+  });
+  if(vide)return null;
+  return Object.assign({jours:[],exclus:[],heures:[],matin:false,aprem:false},global||{},
+    {parAct,txt:brut.trim(),source});
+}
+// Le souhait tel qu'il s'applique à UNE discipline : ce qui est écrit pour elle
+// l'emporte sur les heures notées pour une autre.
+function voeuPour(v,act){
+  if(!v)return null;
+  const propre=v.parAct&&v.parAct[act];
+  const autres=v.parAct?Object.keys(v.parAct).filter(c=>c!==act):[];
+  const heuresAutres=autres.reduce((l,c)=>l.concat(v.parAct[c].heures),[]);
+  const base={jours:v.jours.slice(),exclus:v.exclus.slice(),
+    heures:v.heures.filter(x=>heuresAutres.indexOf(x)<0),matin:v.matin,aprem:v.aprem};
+  const f=propre?fusionV(base,propre):base;
+  return Object.assign(f,{txt:v.txt,herite:v.herite,source:v.source});
+}
+
+// Une famille inscrit souvent trois enfants et ne note l'horaire que sur une fiche.
+// Faute de souhait propre, on reprend celui d'un frère ou d'une sœur du même foyer —
+// en le disant clairement à l'écran, car ce n'est qu'une hypothèse.
+function voeuDe(a){
+  const v=voeuFiche(a);
+  if(v)return v;
+  if(!a||!a.foyer)return null;
+  const f=adherents.find(x=>x&&x.n!==a.n&&x.foyer===a.foyer&&voeuFiche(x));
+  if(!f)return null;
+  return Object.assign({},voeuFiche(f),{herite:`${f.prenom} ${f.nom}`});
+}
+// Bornes du groupe visé : l'heure souhaitée doit tomber DEDANS, pas « à peu près ».
+function bornesGroupe(cr,h){
+  const deb=h?h2m(h):h2m(cr.debut);
+  return[deb,cr.mode==='collectif'?h2m(cr.fin):deb+(parseInt(cr.duree,10)||60)];
+}
+// Score d'une place au regard du souhait : négatif = contraire au souhait
+function voeuOk(v,cr,h){
+  if(!v)return 0;
+  const b=bornesGroupe(cr,h),deb=b[0],fin=b[1];
+  let s=0;
+  if(v.exclus&&v.exclus.indexOf(cr.jour)>=0)return -3;
+  if(v.jours.length){if(v.jours.indexOf(cr.jour)<0)return -2;s+=2;}
+  if(v.heures.length)s+=v.heures.some(x=>x>=deb&&x<fin)?3:-1;
+  if(v.matin)s+=(deb<12*60)?1:-1;
+  if(v.aprem)s+=(deb>=12*60)?1:-1;
+  return s;
+}
+// Ce qui, dans le souhait, n'est PAS satisfait par cette place — dit en toutes lettres.
+function voeuBilan(v,cr,h){
+  if(!v)return null;
+  const b=bornesGroupe(cr,h),deb=b[0],fin=b[1],m=[];
+  if(v.exclus&&v.exclus.indexOf(cr.jour)>=0)m.push(`${jourL(cr.jour).toLowerCase()} était écarté`);
+  if(v.jours.length&&v.jours.indexOf(cr.jour)<0)m.push(`jour souhaité : ${v.jours.map(j=>jourL(j).toLowerCase()).join(' ou ')}`);
+  if(v.heures.length&&!v.heures.some(x=>x>=deb&&x<fin))m.push(`heure souhaitée : ${v.heures.map(x=>fmtH(m2h(x))).join(' ou ')}`);
+  if(v.matin&&deb>=12*60)m.push('le matin était demandé');
+  if(v.aprem&&deb<12*60)m.push("l'après-midi était demandé");
+  return{ok:!m.length,manque:m.join(' · ')};
+}
+// Places libres d'une discipline, réordonnées selon le souhait de cet élève
+function placesPourEleve(a,act){
+  const v=voeuPour(voeuDe(a),act),l=placesLibresPour(act);
+  if(!v)return l;
+  return l.map((p,i)=>({p,i,s:voeuOk(v,p.cr,p.h)})).sort((x,y)=>y.s-x.s||x.i-y.i).map(o=>o.p);
+}
+function voeuBandeau(v){
+  return v?`<div style="font-size:12px;background:var(--sand);border-radius:7px;padding:8px 11px;margin-bottom:14px">
+    🕐 <strong>${v.herite?`Disponibilités de ${esc(v.herite)}`:(v.source==='obs'?'Lu dans les observations':'Disponibilités de la fiche')}</strong> : « ${esc(v.txt)} »
+    ${v.herite?'— même foyer, à vérifier. ':'— '}Les créneaux qui y correspondent sont proposés en premier.</div>`:'';
+}
+
+// ─── PAGE PLANNING ─────────────────────────────────────────
+let plSel=null;        // créneau ouvert dans le panneau de détail
+
+function plBornes(){
+  if(!creneaux.length)return[14*60,20*60];
+  let mn=24*60,mx=0;
+  creneaux.forEach(cr=>{mn=Math.min(mn,h2m(cr.debut));mx=Math.max(mx,h2m(cr.fin));});
+  mn=Math.floor(mn/60)*60;mx=Math.ceil(mx/60)*60;
+  if(mx-mn<120)mx=mn+120;
+  return[mn,mx];
+}
+// Répartit en sous-colonnes les créneaux d'un même jour qui se chevauchent
+// (deux professeurs à la même heure) : _i = colonne, _n = nombre de colonnes.
+function plDisposer(list){
+  let cluster=[],finMax=-1;
+  const flush=()=>{
+    if(!cluster.length)return;
+    const fins=[];
+    cluster.forEach(cr=>{
+      let i=0;while(fins[i]!==undefined&&fins[i]>h2m(cr.debut))i++;
+      fins[i]=h2m(cr.fin);cr._i=i;
+    });
+    cluster.forEach(cr=>cr._n=fins.length);
+    cluster=[];finMax=-1;
+  };
+  list.forEach(cr=>{
+    if(cluster.length&&h2m(cr.debut)>=finMax)flush();
+    cluster.push(cr);finMax=Math.max(finMax,h2m(cr.fin));
+  });
+  flush();
+}
+function plGrille(){
+  const b=plBornes(),mn=b[0],mx=b[1],hauteur=(mx-mn)/30*PL_ROW;
+  let h=`<div class="pl-col pl-hours"><div class="pl-hdr"></div><div class="pl-hcanvas" style="height:${hauteur}px">`;
+  for(let t=mn;t<=mx;t+=60)h+=`<div class="pl-h" style="top:${(t-mn)/30*PL_ROW}px">${fmtH(m2h(t))}</div>`;
+  h+='</div></div>';
+  JOURS.forEach(j=>{
+    const list=creneaux.filter(c=>c.jour===j.n).sort((a,b2)=>h2m(a.debut)-h2m(b2.debut)||h2m(a.fin)-h2m(b2.fin));
+    plDisposer(list);
+    let blocs='';
+    list.forEach(cr=>{
+      const top=(h2m(cr.debut)-mn)/30*PL_ROW,ht=Math.max(30,crDuree(cr)/30*PL_ROW-3);
+      const n=cr._n||1,w=100/n,left=(cr._i||0)*w;
+      const c=PL_COUL[crActs(cr)[0]]||{bg:'#EEF1F5',fg:'#3A4356'};
+      const occ=crOccTotal(cr),tot=crPlacesTotal(cr);
+      const cls=occ>=tot?'pl-full':(occ?'':'pl-libre');
+      blocs+=`<div class="pl-block${plSel===cr.id?' sel':''}" style="top:${top}px;height:${ht}px;left:calc(${left}% + 2px);width:calc(${w}% - 4px);background:${c.bg};border-left-color:${c.fg}" onclick="plSelect('${cr.id}')" title="${esc(crLabel(cr))} — ${fmtH(cr.debut)} à ${fmtH(cr.fin)}">
+        <div class="pl-b-t" style="color:${c.fg}">${crEmoji(cr)} ${esc(crLabel(cr))}</div>
+        <div class="pl-b-s">${fmtH(cr.debut)}–${fmtH(cr.fin)}${cr.prof?' · '+esc(cr.prof):''}</div>
+        <div class="pl-b-s ${cls}">${cr.mode==='collectif'?`${occ}/${tot} élèves`:`${occ} élève${occ>1?'s':''} · ${plResumeTranches(cr)}`}</div></div>`;
+    });
+    h+=`<div class="pl-col"><div class="pl-hdr">${j.l}</div><div class="pl-canvas" style="height:${hauteur}px">${blocs}</div></div>`;
+  });
+  return `<div class="pl-grid">${h}</div>`;
+}
+// « 2 tranches libres » : les heures du créneau où aucun cours n'a encore été ouvert
+function plResumeTranches(cr){
+  const g=crGroupes(cr),libres=g.filter(x=>!x.act).length;
+  const dispo=g.filter(x=>x.act&&x.reste>0).reduce((s,x)=>s+x.reste,0);
+  if(!libres&&!dispo)return 'complet';
+  return (libres?`${libres} tranche${libres>1?'s':''} libre${libres>1?'s':''}`:'')
+    +(libres&&dispo?' · ':'')+(dispo?`${dispo} place${dispo>1?'s':''}`:'');
+}
+function plListeMobile(){
+  let h='';
+  JOURS.forEach(j=>{
+    const list=creneaux.filter(c=>c.jour===j.n).sort((a,b)=>h2m(a.debut)-h2m(b.debut));
+    if(!list.length)return;
+    h+=`<div class="pl-jour"><h4>${j.l}</h4>`;
+    list.forEach(cr=>{
+      const c=PL_COUL[crActs(cr)[0]]||{bg:'#EEF1F5',fg:'#3A4356'};
+      const occ=crOccTotal(cr),tot=crPlacesTotal(cr);
+      h+=`<div class="pl-item" style="border-left-color:${c.fg};background:${plSel===cr.id?c.bg:'var(--card)'}" onclick="plSelect('${cr.id}')">
+        <div style="font-size:13px;font-weight:600;color:${c.fg}">${crEmoji(cr)} ${esc(crLabel(cr))}</div>
+        <div style="font-size:12px;color:var(--text2)">${fmtH(cr.debut)}–${fmtH(cr.fin)}${cr.prof?' · '+esc(cr.prof):''}${cr.salle?' · '+esc(cr.salle):''}</div>
+        <div style="font-size:12px;color:var(--text2)">${cr.mode==='collectif'?`${occ}/${tot} élèves`:`${occ} élève${occ>1?'s':''} · ${plResumeTranches(cr)}`}</div></div>`;
+    });
+    h+='</div>';
+  });
+  return `<div class="pl-liste">${h||'<div class="pl-empty">Aucun créneau.</div>'}</div>`;
+}
+function plDetail(){
+  const cr=crById(plSel);
+  if(!cr)return '';
+  const c=PL_COUL[crActs(cr)[0]]||{bg:'#EEF1F5',fg:'#3A4356'};
+  const capTxt=cr.mode==='collectif'
+    ? `un seul groupe · ${capDe(cr,crActs(cr)[0])} places`
+    : `${crGroupes(cr).length} tranches de ${cr.duree||60} min · `+crActs(cr).map(a=>`${actInfo(a).label} ${capDe(cr,a)}/h`).join(', ');
+  let h=`<div class="card" style="border-left:3px solid ${c.fg}">
+    <div style="display:flex;align-items:flex-start;gap:10px;flex-wrap:wrap;margin-bottom:14px">
+      <div style="flex:1;min-width:210px">
+        <div style="font-size:15px;font-weight:600;color:${c.fg}">${crEmoji(cr)} ${esc(crLabel(cr))}</div>
+        <div style="font-size:13px;color:var(--text2);margin-top:2px">${jourL(cr.jour)} ${fmtH(cr.debut)} → ${fmtH(cr.fin)} · ${capTxt}${cr.prof?' · '+esc(cr.prof):''}${cr.salle?' · '+esc(cr.salle):''}</div>
+      </div>
+      <div style="display:flex;gap:7px;flex-wrap:wrap">
+        <button class="btn btn-outline" onclick="plFormCreneau('${cr.id}')">✏️ Modifier</button>
+        <button class="btn btn-danger-soft" onclick="plSupprCreneau('${cr.id}')">🗑️ Supprimer</button>
+        <button class="btn btn-outline" onclick="plSelect(null)">Fermer</button>
+      </div>
+    </div>`;
+  crGroupes(cr).forEach(g=>{
+    const titre=cr.mode==='collectif'?`${fmtH(cr.debut)}–${fmtH(cr.fin)}`:fmtH(g.h);
+    const etat=g.act
+      ? `<span class="badge badge-instr ${ic(g.act)}">${g.act}</span> <span style="font-size:12px;color:${g.reste?'var(--text2)':'var(--red)'}">${g.occ.length}/${g.cap}${g.reste?` · ${g.reste} place(s)`:' · complet'}</span>`
+      : `<span style="font-size:12px;color:var(--text3);font-style:italic">heure libre — jusqu'à ${g.cap} élèves selon la discipline</span>`;
+    h+=`<div style="padding:9px 0;border-bottom:1px solid var(--border)">
+      <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="pl-slot">${titre}</span>${etat}</div>`;
+    if(g.occ.length)h+=`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
+      +g.occ.map(o=>`<span class="pl-chip">${esc(o.a.prenom)} ${esc(o.a.nom)}
+        <span style="cursor:pointer;color:var(--red);font-weight:700" title="Retirer" onclick="plRetirer(${o.a.n},'${o.act}')">×</span></span>`).join('')+`</div>`;
+    h+='</div>';
+  });
+  // ajouter un élève dans ce créneau
+  const dispo=nonPlaces().filter(x=>crActs(cr).indexOf(x.act)>=0);
+  const libres=crGroupes(cr).filter(g=>g.reste>0);
+  if(dispo.length&&libres.length){
+    h+=`<div style="display:flex;gap:9px;flex-wrap:wrap;align-items:flex-end;margin-top:14px">
+      <div class="field" style="flex:1;min-width:190px;margin:0"><label>Ajouter un élève en attente</label>
+        <select id="pl-add-eleve" onchange="plMajHeures('${cr.id}')">${dispo.map(x=>`<option value="${x.a.n}|${x.act}">${esc(x.a.prenom)} ${esc(x.a.nom)} — ${actInfo(x.act).label}</option>`).join('')}</select></div>`;
+    if(cr.mode!=='collectif')h+=`<div class="field" style="min-width:190px;margin:0"><label>Dans l'heure de</label><select id="pl-add-h"></select></div>`;
+    h+=`<button class="btn btn-primary" onclick="plAjouterDansCreneau('${cr.id}')">Placer</button></div>`;
+  }
+  return h+'</div>';
+}
+// Recalcule les heures proposées selon la discipline de l'élève choisi
+function plMajHeures(id){
+  const cr=crById(id),s=document.getElementById('pl-add-eleve'),hs=document.getElementById('pl-add-h');
+  if(!cr||!s||!hs)return;
+  const act=(s.value||'').split('|')[1];
+  const ok=crGroupes(cr).filter(g=>g.reste>0&&(!g.act||g.act===act));
+  hs.innerHTML=ok.map(g=>`<option value="${g.h}">${fmtH(g.h)} — ${g.act?`${actInfo(g.act).label} ${g.occ.length}/${g.cap}`:`libre, jusqu'à ${capDe(cr,act)}`}</option>`).join('')
+    ||'<option value="">aucune heure disponible</option>';
+}
+function plCarteCharge(){
+  let alerte='',lignes='';
+  ACTIVITES.forEach(A=>{
+    const insc=adherents.filter(a=>actsOf(a).indexOf(A.code)>=0).length;
+    if(!insc&&!creneaux.some(cr=>crActs(cr).indexOf(A.code)>=0))return;
+    const places=adherents.filter(a=>{const m=affectOf(a);return m[A.code]&&crById(m[A.code].c);}).length;
+    const attente=insc-places,libres=placesLibresPour(A.code).reduce((s,p)=>s+p.g.reste,0);
+    if(attente>libres)alerte+=`<div class="pl-alerte"><span>⚠️</span><div><strong>${A.emoji} ${A.label}</strong> : ${attente} élève(s) en attente pour ${libres} place(s) libre(s) — il en manque <strong>${attente-libres}</strong>.
+      Ajoutez un créneau, ou un second professeur en parallèle.</div></div>`;
+    lignes+=`<div class="instr-row"><div>${A.emoji} ${A.label}</div><div style="text-align:center">${insc}</div>
+      <div style="text-align:center">${places}</div><div style="text-align:center;${attente?'font-weight:600':''}">${attente}</div>
+      <div style="text-align:right;${attente>libres?'color:var(--red);font-weight:600':''}">${libres}</div></div>`;
+  });
+  if(!lignes)return '';
+  return alerte+`<div class="card"><div class="card-title">Où en est le remplissage</div>
+    <div class="instr-row hdr"><div>Discipline</div><div style="text-align:center">Inscrits</div>
+      <div style="text-align:center">Placés</div><div style="text-align:center">En attente</div><div style="text-align:right">Places libres</div></div>
+    ${lignes}
+    <div style="font-size:12px;color:var(--text3);margin-top:10px">Une heure encore vide est comptée dans les places libres de chaque discipline du créneau — mais elle ne servira qu'à l'une d'elles.</div></div>`;
+}
+function plCarteAttente(){
+  const att=nonPlaces();
+  if(!att.length)return `<div class="card"><div class="card-title">Élèves en attente</div>
+    <div style="font-size:13px;color:var(--green)">✓ Chaque inscrit a son créneau.</div></div>`;
+  const par={};att.forEach(x=>{(par[x.act]=par[x.act]||[]).push(x.a);});
+  return `<div class="card"><div class="card-title">En attente de créneau · ${att.length}</div>`
+    +Object.keys(par).map(act=>`<div style="margin-bottom:11px">
+        <span class="badge badge-instr ${ic(act)}">${act}</span>
+        <span style="font-size:12px;color:var(--text2)"> · ${par[act].length} élève(s)</span>
+        <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
+        +par[act].map(a=>{const v=voeuDe(a);
+          return `<button class="pl-chip" onclick="proposerPlacement(${a.n})"${v?` title="${v.herite?`Repris de la fiche de ${esc(v.herite)}`:(v.source==='obs'?'Lu dans les observations':'Disponibilités')} : ${esc(v.txt)}"`:''}>${esc(a.prenom)} ${esc(a.nom)}${v?(v.herite?' 👪':' 🕐'):''}</button>`;}).join('')
+        +`</div></div>`).join('')
+    +`<div style="font-size:12px;color:var(--text3);margin-top:4px">Cliquez sur un nom pour lui proposer une place.</div></div>`;
+}
+function renderPlanning(){
+  plMajBadge();
+  const z=document.getElementById('planning-content');
+  if(!z)return;
+  if(!creneaux.length){
+    z.innerHTML=`<div class="card"><div class="card-title">Aucun créneau pour l'instant</div>
+      <div style="font-size:13px;color:var(--text2);line-height:1.7;margin-bottom:14px">
+        Un créneau, c'est une plage de la semaine tenue par un professeur : un jour, une heure de début et de fin, une ou plusieurs disciplines.<br>
+        Chaque heure de la plage devient un petit groupe — ${CAP_ACT.GUITARE} élèves en guitare, ${CAP_ACT.PIANO} en piano.</div>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-primary" onclick="plChargerModele()">📋 Charger les horaires de la section</button>
+        <button class="btn btn-outline" onclick="plFormCreneau(null)">➕ Créer un créneau</button></div>
+      <div style="font-size:12px;color:var(--text3);margin-top:13px;line-height:1.7">
+        Lundi 16h–20h · mercredi 13h30–17h30 · vendredi 14h–17h → guitare &amp; piano<br>
+        Mercredi 10h–12h · jeudi 17h–19h → percussions · samedi 9h–13h → chant</div></div>`;
+    return;
+  }
+  z.innerHTML=`<div class="pl-bar">
+      <button class="btn btn-primary" onclick="plFormCreneau(null)">➕ Nouveau créneau</button>
+      <button class="btn btn-success" onclick="plPlacerTous()">⚡ Proposer un placement pour tous</button>
+      <button class="btn btn-outline" onclick="plImprimer()">🖨️ Imprimer</button>
+      <span style="flex:1"></span>
+      <span style="font-size:12px;color:var(--text2)">${creneaux.length} créneau(x) · ${adherents.length} inscrit(s)</span>
+    </div>
+    ${plDetail()}
+    ${plGrille()}
+    ${plListeMobile()}
+    <div style="font-size:12px;color:var(--text3);margin:10px 0 16px">Cliquez sur un créneau pour voir qui s'y trouve. Pas de cours pendant les vacances scolaires.</div>
+    ${plCarteAttente()}
+    ${plCarteCharge()}`;
+  const cr=crById(plSel);
+  if(cr&&cr.mode!=='collectif')plMajHeures(cr.id);
+}
+function plMajBadge(){
+  const b=document.getElementById('nb-planning-badge');
+  if(!b)return;
+  const k=creneaux.length?nonPlaces().length:0;
+  b.textContent=k;
+  b.style.display=k?'':'none';
+}
+function plSelect(id){plSel=(id&&plSel!==id)?id:null;renderPlanning();}
+function plRetirer(n,act){
+  const a=adherents.find(x=>x.n===n);
+  retirer(n,act);
+  renderPlanning();
+  if(a)toast(`${a.prenom} ${a.nom} retiré(e) du créneau`);
+}
+function plAjouterDansCreneau(id){
+  const cr=crById(id);if(!cr)return;
+  const s=document.getElementById('pl-add-eleve');if(!s||!s.value)return;
+  const parts=s.value.split('|'),n=parseInt(parts[0],10),act=parts[1];
+  const hs=document.getElementById('pl-add-h');
+  const h=cr.mode==='collectif'?null:(hs?hs.value:null);
+  if(cr.mode!=='collectif'&&!h){toast('Aucune heure disponible pour cette discipline',true);return;}
+  if(placer(n,act,id,h)){
+    const a=adherents.find(x=>x.n===n);
+    toast(`${a.prenom} ${a.nom} · ${jourL(cr.jour).toLowerCase()} ${fmtH(h||cr.debut)} ✓`);
+  }
+  renderPlanning();
+}
+function plChargerModele(){
+  if(creneaux.length&&!confirm('Ajouter les 6 créneaux affichés par la section à ceux qui existent déjà ?'))return;
+  PL_MODELE.forEach(m=>creneaux.push(Object.assign({id:plUid(),prof:'',salle:''},m)));
+  // (prof déjà porté par le modèle ; salle à renseigner par l'utilisateur)
+  saveCreneaux();
+  renderPlanning();
+  toast('6 créneaux créés — ajustez-les si besoin');
+}
+
+// ─── Créer / modifier un créneau ───────────────────────────
+let plActsForm=[];
+let plEditId=null;      // créneau en cours d'édition dans la fenêtre
+function plFormCreneau(id){
+  const cr=id?crById(id):null;
+  plEditId=id||null;
+  const d=cr||{jour:1,debut:'16:00',fin:'20:00',acts:[],mode:'tranches',duree:60,capacite:10,caps:{},prof:'',salle:''};
+  plActsForm=crActs(d).slice();
+  document.getElementById('pl-modal-box').innerHTML=`
+    <div class="pl-modal-titre">${cr?'Modifier le créneau':'Nouveau créneau'}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:16px">Un créneau par professeur : deux professeurs à la même heure = deux créneaux, que la grille affiche côte à côte.</div>
+    <div class="field"><label>Discipline(s) <span class="req">*</span></label>
+      <div style="display:flex;gap:7px;flex-wrap:wrap" id="pl-acts">
+        ${ACTIVITES.map(a=>`<span class="pl-chip${plActsForm.indexOf(a.code)>=0?' on':''}" data-c="${a.code}" onclick="plToggleAct('${a.code}')">${a.emoji} ${a.label}</span>`).join('')}
+      </div></div>
+    <div class="pl-form">
+      <div class="field"><label>Jour</label><select id="pl_jour">${JOURS.map(j=>`<option value="${j.n}"${d.jour===j.n?' selected':''}>${j.l}</option>`).join('')}</select></div>
+      <div class="field"><label>Début</label><input type="time" id="pl_debut" value="${d.debut}" step="300"></div>
+      <div class="field"><label>Fin</label><input type="time" id="pl_fin" value="${d.fin}" step="300"></div>
+      <div class="field"><label>Organisation</label><select id="pl_mode" onchange="plToggleMode()">
+        <option value="tranches"${d.mode!=='collectif'?' selected':''}>Un groupe par tranche horaire</option>
+        <option value="collectif"${d.mode==='collectif'?' selected':''}>Un seul groupe sur toute la plage</option></select></div>
+      <div class="field" id="pl_f_duree"><label>Durée d'une tranche</label><select id="pl_duree">
+        ${PL_DUREES.map(m=>`<option value="${m}"${(d.duree||60)===m?' selected':''}>${m} minutes</option>`).join('')}</select></div>
+      <div class="field" id="pl_f_cap"><label>Places du groupe</label><input type="number" id="pl_cap" min="1" max="60" value="${d.capacite||10}"></div>
+      <div class="field"><label>Professeur</label><input type="text" id="pl_prof" value="${esc(d.prof||'')}" placeholder="facultatif"></div>
+      <div class="field"><label>Salle</label><input type="text" id="pl_salle" value="${esc(d.salle||'')}" placeholder="facultatif"></div>
+    </div>
+    <div id="pl_f_caps"></div>
+    <div id="pl-form-err" style="font-size:12px;color:var(--red);min-height:16px"></div>
+    <div style="display:flex;gap:9px;justify-content:flex-end;margin-top:10px">
+      <button class="btn btn-outline" onclick="plCloseModal()">Annuler</button>
+      <button class="btn btn-primary" onclick="plSaveCreneau(${cr?`'${cr.id}'`:'null'})">${cr?'Enregistrer':'Créer le créneau'}</button></div>`;
+  document.getElementById('pl-modal').classList.add('show');
+  plToggleMode();
+}
+function plToggleAct(code){
+  const i=plActsForm.indexOf(code);
+  if(i>=0)plActsForm.splice(i,1);else plActsForm.push(code);
+  document.querySelectorAll('#pl-acts .pl-chip').forEach(el=>el.classList.toggle('on',plActsForm.indexOf(el.getAttribute('data-c'))>=0));
+  plMajCaps();
+}
+// Capacité par discipline : combien d'élèves le professeur prend en même temps
+function plMajCaps(){
+  const z=document.getElementById('pl_f_caps');
+  if(!z)return;
+  const col=document.getElementById('pl_mode').value==='collectif';
+  if(col||!plActsForm.length){z.innerHTML='';return;}
+  const anciens={};
+  z.querySelectorAll('input[data-cap]').forEach(i=>anciens[i.getAttribute('data-cap')]=i.value);
+  const cr=plEditId?crById(plEditId):null;
+  z.innerHTML=`<div class="field" style="margin-top:2px"><label>Élèves par tranche</label>
+    <div class="pl-form">${plActsForm.map(c=>`<div class="field" style="margin-bottom:8px">
+      <label style="font-size:11px">${actInfo(c).emoji} ${actInfo(c).label}</label>
+      <input type="number" min="1" max="30" data-cap="${c}" value="${anciens[c]||((cr&&cr.caps&&cr.caps[c])||CAP_ACT[c]||4)}"></div>`).join('')}</div></div>`;
+}
+function plToggleMode(){
+  const col=document.getElementById('pl_mode').value==='collectif';
+  document.getElementById('pl_f_duree').style.display=col?'none':'';
+  document.getElementById('pl_f_cap').style.display=col?'':'none';
+  plMajCaps();
+}
+function plSaveCreneau(id){
+  const err=document.getElementById('pl-form-err');
+  const debut=document.getElementById('pl_debut').value,fin=document.getElementById('pl_fin').value;
+  const mode=document.getElementById('pl_mode').value;
+  if(!plActsForm.length){err.textContent='Choisissez au moins une discipline.';return;}
+  if(!debut||!fin||h2m(fin)<=h2m(debut)){err.textContent='L\'heure de fin doit être après l\'heure de début.';return;}
+  const caps={};
+  document.querySelectorAll('#pl_f_caps input[data-cap]').forEach(i=>{
+    const v=parseInt(i.value,10);if(v>0)caps[i.getAttribute('data-cap')]=v;
+  });
+  const o={
+    id:id||plUid(),
+    acts:ACTIVITES.map(a=>a.code).filter(c=>plActsForm.indexOf(c)>=0),
+    jour:parseInt(document.getElementById('pl_jour').value,10),
+    debut,fin,mode,
+    duree:parseInt(document.getElementById('pl_duree').value,10)||60,
+    capacite:parseInt(document.getElementById('pl_cap').value,10)||10,
+    caps,
+    prof:document.getElementById('pl_prof').value.trim(),
+    salle:document.getElementById('pl_salle').value.trim()
+  };
+  if(mode!=='collectif'&&crTranches(o).length<1){err.textContent='La plage est plus courte qu\'une tranche.';return;}
+  if(id){
+    const i=creneaux.findIndex(c=>c.id===id);
+    if(i<0){err.textContent='Créneau introuvable.';return;}
+    creneaux[i]=o;
+  }else creneaux.push(o);
+  const perdus=plNettoyer();
+  saveCreneaux();
+  if(perdus)saveData();
+  plCloseModal();
+  plSel=o.id;
+  renderPlanning();
+  toast(id?`Créneau modifié${perdus?` — ${perdus} élève(s) à replacer`:''}`:'Créneau créé ✓');
+}
+function plSupprCreneau(id){
+  const cr=crById(id);if(!cr)return;
+  const occ=crOccupants(id);
+  const msg=`Supprimer le créneau ${crLabel(cr)} du ${jourL(cr.jour).toLowerCase()} ${fmtH(cr.debut)}–${fmtH(cr.fin)} ?`
+    +(occ.length?`\n\n${occ.length} élève(s) y sont placés : ils repasseront en attente de créneau.`:'');
+  if(!confirm(msg))return;
+  creneaux=creneaux.filter(c=>c.id!==id);
+  const perdus=plNettoyer();
+  saveCreneaux();
+  if(perdus)saveData();
+  plSel=null;
+  renderPlanning();
+  toast('Créneau supprimé');
+}
+
+// ─── Placement : proposé, jamais imposé ────────────────────
+let plModalCtx=null;
+function plCloseModal(){document.getElementById('pl-modal').classList.remove('show');plModalCtx=null;}
+function proposerPlacement(n){
+  const a=adherents.find(x=>x.n===n);
+  if(!a||!creneaux.length)return;
+  const m=affectOf(a);
+  const manquantes=actsOf(a).filter(act=>!m[act]||!crById(m[act].c));
+  if(!manquantes.length){toast(`${a.prenom} ${a.nom} a déjà tous ses créneaux`);return;}
+  let h=`<div class="pl-modal-titre">Placer ${esc(a.prenom)} ${esc(a.nom)}</div>
+    <div style="font-size:12px;color:var(--text2);margin-bottom:12px">L'application propose la première place libre, en complétant d'abord les groupes déjà commencés. Choisissez-en une autre si l'élève n'est pas disponible.</div>
+    ${voeuBandeau(voeuDe(a))}`;
+  manquantes.forEach(act=>{
+    const places=placesPourEleve(a,act),inf=actInfo(act);
+    if(!places.length){
+      h+=`<div class="field"><label>${inf.emoji} ${esc(inf.label)}</label>
+        <div style="font-size:12px;color:#7A0A0A;padding:9px 11px;border:1px solid var(--red-light);border-radius:7px;background:#FFF5F5">
+        Aucune place libre. Créez un créneau, ou libérez une place.</div></div>`;
+    }else{
+      h+=`<div class="field"><label>${inf.emoji} ${esc(inf.label)}</label>
+        <select id="plsel_${act}">${places.map((p,i)=>`<option value="${p.cr.id}|${p.h||''}"${i===0?' selected':''}>${esc(placeLabel(p.cr,p.h,p.g))}</option>`).join('')}
+        <option value="">— ne pas placer maintenant —</option></select></div>`;
+    }
+  });
+  h+=`<div style="display:flex;gap:9px;justify-content:flex-end;margin-top:14px">
+      <button class="btn btn-outline" onclick="plCloseModal()">Plus tard</button>
+      <button class="btn btn-primary" onclick="plValiderPlacement(${a.n})">Placer</button></div>`;
+  document.getElementById('pl-modal-box').innerHTML=h;
+  plModalCtx={n,acts:manquantes};
+  document.getElementById('pl-modal').classList.add('show');
+}
+function plValiderPlacement(n){
+  const a=adherents.find(x=>x.n===n);
+  const acts=plModalCtx?plModalCtx.acts.slice():[];
+  let k=0,det=[];
+  acts.forEach(act=>{
+    const s=document.getElementById('plsel_'+act);
+    if(!s||!s.value)return;
+    const parts=s.value.split('|'),cr=crById(parts[0]);
+    if(placer(n,act,parts[0],parts[1]||null,true)&&cr){k++;det.push(`${actInfo(act).label} ${jourL(cr.jour).toLowerCase()} ${fmtH(parts[1]||cr.debut)}`);}
+  });
+  if(k)saveData();
+  plCloseModal();
+  if(k&&a)toast(`${a.prenom} ${a.nom} · ${det.join(' · ')} ✓`);
+  const pg=document.getElementById('page-planning');
+  if(pg&&pg.classList.contains('active'))renderPlanning();else plMajBadge();
+}
+// Placement en série de tous les élèves en attente — récapitulé avant d'être appliqué.
+// Les élèves d'une même discipline sont traités ensemble pour remplir les groupes
+// heure par heure plutôt que d'ouvrir six heures à moitié vides.
+function plPlacerTous(){
+  const att=nonPlaces();
+  if(!att.length){toast('Chaque inscrit a déjà son créneau ✓');return;}
+  const sim={};   // 'idCreneau|heure' -> {act, n}
+  creneaux.forEach(cr=>crGroupes(cr).forEach(g=>{sim[cr.id+'|'+(g.h||'')]={act:g.act,n:g.occ.length};}));
+  const plan=[],refus=[];
+  // Les élèves porteurs d'un souhait passent en premier : ils ont moins de latitude.
+  const ordre=att.slice().sort((x,y)=>(voeuDe(y.a)?1:0)-(voeuDe(x.a)?1:0)||x.act.localeCompare(y.act)||x.a.n-y.a.n);
+  ordre.forEach(x=>{
+    const v=voeuPour(voeuDe(x.a),x.act),pos=[];
+    creneauxTries().filter(cr=>crActs(cr).indexOf(x.act)>=0).forEach(cr=>{
+      (cr.mode==='collectif'?[null]:crTranches(cr)).forEach(h=>{
+        const st=sim[cr.id+'|'+(h||'')];
+        if(!st)return;
+        if(st.act&&st.act!==x.act)return;                       // heure déjà prise par une autre discipline
+        if(st.n>=(st.act?capDe(cr,st.act):capDe(cr,x.act)))return;
+        pos.push({cr,h,ouvert:st.act?1:0,score:voeuOk(v,cr,h)});
+      });
+    });
+    // souhait d'abord, puis les groupes déjà commencés, puis l'ordre de la semaine
+    pos.sort((p,q)=>q.score-p.score||q.ouvert-p.ouvert||p.cr.jour-q.cr.jour||h2m(p.h||p.cr.debut)-h2m(q.h||q.cr.debut));
+    const ok=pos[0];
+    if(ok){
+      const st=sim[ok.cr.id+'|'+(ok.h||'')];st.act=x.act;st.n++;
+      const bil=voeuBilan(v,ok.cr,ok.h);
+      plan.push({a:x.a,act:x.act,cr:ok.cr,h:ok.h,voeu:v?(bil.ok?'respecté':bil.manque):''});
+    }else refus.push(x);
+  });
+  if(!plan.length){alert(`Aucune place libre pour les ${att.length} élève(s) en attente.\n\nCréez un créneau supplémentaire, ou un second professeur en parallèle.`);return;}
+  // Les souhaits qu'on n'a pas pu tenir passent EN TÊTE et en entier : c'est là que se
+  // jouent les décisions. Le reste du détail est tronqué, lui, pour rester lisible.
+  const lig=p=>`  • ${p.a.prenom} ${p.a.nom} — ${actInfo(p.act).label} : ${jourL(p.cr.jour).toLowerCase()} ${fmtH(p.h||p.cr.debut)}`;
+  const conflits=plan.filter(p=>p.voeu&&p.voeu!=='respecté');
+  const suivis=plan.filter(p=>p.voeu==='respecté');
+  const autres=plan.filter(p=>!p.voeu);
+  const msg=`Placement proposé pour ${plan.length} élève(s).\n`
+    +(conflits.length?`\n⚠️ ${conflits.length} souhait(s) impossibles à tenir tels quels :\n`
+        +conflits.map(p=>lig(p)+`  → ${p.voeu}`).join('\n')+'\n':'')
+    +(suivis.length?`\n✓ ${suivis.length} souhait(s) respecté(s) :\n`+suivis.map(lig).join('\n')+'\n':'')
+    +(autres.length?`\nSans souhait particulier (${autres.length}) :\n`+autres.slice(0,12).map(lig).join('\n')
+        +(autres.length>12?`\n  … et ${autres.length-12} autre(s)`:'')+'\n':'')
+    +(refus.length?`\n\n⚠️ ${refus.length} élève(s) resteront en attente, faute de place :\n`
+        +refus.slice(0,8).map(r=>`  • ${r.a.prenom} ${r.a.nom} — ${actInfo(r.act).label}`).join('\n')
+        +(refus.length>8?`\n  … et ${refus.length-8} autre(s)`:''):'')
+    +`\n\nLes souhaits notés dans les observations des fiches sont suivis quand c'est possible ; pour les autres, les élèves sont rangés dans l'ordre de la semaine. Vérifiez et déplacez ensuite ce qui doit l'être.\n\nAppliquer ce placement ?`;
+  if(!confirm(msg))return;
+  let k=0;
+  plan.forEach(p=>{if(placer(p.a.n,p.act,p.cr.id,p.h,true))k++;});
+  saveData();
+  renderPlanning();
+  toast(`${k} élève(s) placé(s)${refus.length?` · ${refus.length} en attente`:''}`);
+}
+
+// ─── Planning imprimable ───────────────────────────────────
+function plImprimer(){
+  const lignes=creneauxTries().map(cr=>{
+    const gs=crGroupes(cr).filter(g=>g.occ.length);
+    const detail=gs.length?gs.map(g=>`<strong>${cr.mode==='collectif'?fmtH(cr.debut)+'–'+fmtH(cr.fin):fmtH(g.h)}</strong> ${actInfo(g.act).label} (${g.occ.length}/${g.cap}) : `
+        +g.occ.map(o=>`${esc(o.a.prenom)} ${esc(o.a.nom)}`).join(', ')).join('<br>')
+      :'<i>aucun élève placé</i>';
+    return `<tr><td><strong>${jourL(cr.jour)}</strong></td><td>${fmtH(cr.debut)} – ${fmtH(cr.fin)}</td>
+      <td>${esc(crLabel(cr))}</td><td>${esc(cr.prof||'')}${cr.salle?'<br><span style="color:#666">'+esc(cr.salle)+'</span>':''}</td>
+      <td style="text-align:center">${crOccTotal(cr)}</td><td style="font-size:11px">${detail}</td></tr>`;
+  }).join('');
+  const att=nonPlaces();
+  const html=docHeader('Planning de la semaine',`Saison ${SAISON.label}`)
+    +`<table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px">
+       <thead><tr style="background:#f0f2f6">
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Jour</th>
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Horaire</th>
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Discipline</th>
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Professeur</th>
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Élèves</th>
+         <th style="text-align:left;padding:6px;border:1px solid #d8dde5">Détail des groupes</th></tr></thead>
+       <tbody>${lignes.replace(/<td/g,'<td style="padding:6px;border:1px solid #d8dde5;vertical-align:top"')}</tbody></table>
+       <p style="font-size:11px;color:#555;margin-top:10px">Pas de cours pendant les vacances scolaires.</p>`
+    +(att.length?`<p style="font-size:11px;color:#7A0A0A">${att.length} élève(s) en attente de créneau.</p>`:'')
+    +docFooter();
+  openDoc(html);
+}
+
 function renderRecapGlobal(){
   const total=adherents.length,payes=adherents.filter(a=>a.paie==='OUI').length,attente=adherents.filter(a=>a.paie==='NON').length;
   const nbInscriptions=adherents.reduce((s,a)=>s+actsOf(a).length,0);
@@ -1868,14 +2722,14 @@ function insVar(fieldId,v){const ta=document.getElementById(fieldId);if(!ta)retu
 function exportXLSX(){
   if(!window.XLSX){toast('Bibliothèque Excel non chargée',true);return;}
   const wb=XLSX.utils.book_new();
-  const inscRows=[["N°","NOM","PRÉNOM","ÂGE","CAT.","TÉL.","EMAIL","PARENT/TUTEUR","ACTIVITÉS","NB ACT.","FOYER","REMISE","ADHÉSION","PAIEMENT","MODE","AIDE","MONTANT AIDE","T1","T2","T3","TOTAL","OBSERVATIONS"]];
+  const inscRows=[["N°","NOM","PRÉNOM","ÂGE","CAT.","TÉL.","EMAIL","PARENT/TUTEUR","ACTIVITÉS","NB ACT.","FOYER","REMISE","ADHÉSION","PAIEMENT","MODE","AIDE","MONTANT AIDE","T1","T2","T3","TOTAL","DISPONIBILITÉS","OBSERVATIONS"]];
   adherents.forEach(a=>{
     const c=recalcFiche(a);
     inscRows.push([a.n,a.nom,a.prenom,a.age,a.cat,a.tel,a.email,a.parent,actsLabel(a),actsOf(a).length,a.foyer||'',
       c.remise?`−${Math.round(c.taux*100)} % (${c.motif})`:'',
-      a.adh,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.t1,a.t2,a.t3,a.adh+a.t1+a.t2+a.t3,a.obs]);
+      a.adh,a.paie,a.mode,a.aide?a.aide.type:'',a.aide?a.aide.montant:'',a.t1,a.t2,a.t3,a.adh+a.t1+a.t2+a.t3,a.dispo||'',a.obs]);
   });
-  const ws1=XLSX.utils.aoa_to_sheet(inscRows);ws1['!cols']=[4,22,13,6,9,16,26,20,26,8,12,22,10,10,10,14,12,10,10,10,10,36].map(w=>({wch:w}));
+  const ws1=XLSX.utils.aoa_to_sheet(inscRows);ws1['!cols']=[4,22,13,6,9,16,26,20,26,8,12,22,10,10,10,14,12,10,10,10,10,28,36].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,ws1,"Inscriptions");
   const chRows=[["N°","NOM","PRÉNOM","ACTIVITÉS","LIBELLÉ","MONTANT","N° CHÈQUE","BANQUE","DATE ENCAISSEMENT","STATUT"]];
   adherents.forEach(a=>{if(a.cheques&&a.cheques.length)a.cheques.forEach(c=>chRows.push([a.n,a.nom,a.prenom,actsLabel(a),c.libelle,c.montant,c.numero,c.banque,fDate(c.dateEncaissement),a.paie]));});
@@ -2659,6 +3513,7 @@ renderAlerts();
 renderActs();
 toggleChequeBlock();
 applySidebarLogo();
+plMajBadge();
 
 // ─── FIREBASE : connexion & base partagée en temps réel ───
 let cloudUnsub=null, cloudArchUnsub=null, cloudReady=false, _importAsked=false;
@@ -2743,6 +3598,8 @@ function refreshCurrentView(){
     else if(id==='recus')renderRecus();
     else if(id==='bordereau')renderBordereau();
     else if(id==='archives')renderArchives();
+    else if(id==='planning')renderPlanning();
+    plMajBadge();
   }catch(e){console.error(e);}
   if(typeof renderAlerts==='function')renderAlerts();
 }
@@ -2754,9 +3611,11 @@ function startCloudSync(){
       const d=snap.data()||{};
       adherents=Array.isArray(d.adherents)?d.adherents:[];
       paiementStatus=d.paiementStatus||{};
+      creneaux=Array.isArray(d.creneaux)?d.creneaux:[];
       try{
         localStorage.setItem('musique_saison_'+SAISON.label+'_adherents',JSON.stringify(adherents));
         localStorage.setItem('musique_saison_'+SAISON.label+'_ps',JSON.stringify(paiementStatus));
+        localStorage.setItem('musique_saison_'+SAISON.label+'_creneaux',JSON.stringify(creneaux));
       }catch(e){}
       cloudReady=true; refreshCurrentView();
     } else {
@@ -2774,7 +3633,7 @@ function startCloudSync(){
 }
 function cloudSave(){
   if(!window.FB_OK||!window.fbAuth||!fbAuth.currentUser)return;
-  seasonRef().set({adherents:adherents,paiementStatus:paiementStatus,updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email},{merge:true})
+  seasonRef().set({adherents:adherents,paiementStatus:paiementStatus,creneaux:creneaux,updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email},{merge:true})
     .catch(e=>{console.error('save',e);toast('Échec sauvegarde cloud',true);});
 }
 function cloudSaveArchives(arch){
