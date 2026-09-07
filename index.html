@@ -448,8 +448,8 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <div class="nav-section">Inscriptions</div>
     <button class="nav-item active" onclick="nouvelleInscription()">✏️ &nbsp;Nouveau inscrit</button>
     <button class="nav-item" onclick="showPage('liste')">📋 &nbsp;Liste <span class="badge" id="nb-inscrits">0</span></button>
-    <div class="nav-section">Planning</div>
-    <button class="nav-item" onclick="showPage('planning')">📅 &nbsp;Planning <span class="badge" id="nb-planning-badge" style="display:none">0</span></button>
+    <div class="nav-section">Emploi du temps</div>
+    <button class="nav-item" onclick="showPage('planning')">📅 &nbsp;Emploi du temps <span class="badge" id="nb-planning-badge" style="display:none">0</span></button>
     <div class="nav-section">Gestion</div>
     <button class="nav-item" onclick="showPage('paiements')">💳 &nbsp;Paiements</button>
     <button class="nav-item" onclick="showPage('mails')">📨 &nbsp;Mails <span class="badge" id="nb-mails-badge">0</span></button>
@@ -2859,6 +2859,46 @@ function exportXLSX(){
     adherents.reduce((s,a)=>s+(a.adh||0),0),adherents.reduce((s,a)=>s+(a.t1||0),0),
     adherents.reduce((s,a)=>s+(a.t2||0),0),adherents.reduce((s,a)=>s+(a.t3||0),0),
     adherents.reduce((s,a)=>s+(a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0),0)]);
+  // ── Emploi du temps : une ligne par élève placé, triée par jour puis par heure.
+  // Les créneaux ne sont pas conservés dans les archives : cette feuille n'a donc
+  // de sens que pour la saison en cours.
+  const edtRows=[["JOUR N°","JOUR","DÉBUT","FIN","DISCIPLINE","PROFESSEUR","SALLE","N°","NOM","PRÉNOM","CAT.","ÂGE","TÉLÉPHONE","EFFECTIF DU GROUPE"]];
+  const edtEcrits=new Set();
+  creneauxTries().forEach(cr=>{
+    crGroupes(cr).forEach(g=>{
+      if(!g.occ.length)return;
+      const collectif=cr.mode==='collectif';
+      const debut=collectif?cr.debut:g.h;
+      const fin=collectif?cr.fin:m2h(h2m(g.h)+(parseInt(cr.duree,10)||60));
+      const effectif=`${g.occ.length}/${g.cap}`;
+      g.occ.forEach(o=>{
+        edtEcrits.add(o.a.n+'|'+o.act);
+        edtRows.push([cr.jour,jourL(cr.jour),fmtH(debut),fmtH(fin),actInfo(o.act).label,
+                      cr.prof||'',cr.salle||'',o.a.n,o.a.nom,o.a.prenom,o.a.cat,o.a.age,o.a.tel||'',effectif]);
+      });
+    });
+  });
+  // Filet : un élève ne doit jamais disparaître de l'emploi du temps. Si son
+  // affectation pointe une heure qui n'existe plus dans le créneau (durée modifiée
+  // depuis un autre poste, par exemple), il figure ici plutôt que nulle part.
+  const edtOublies=[];
+  adherents.forEach(a=>{
+    const m=affectOf(a);
+    actsOf(a).forEach(act=>{
+      if(!m[act]||!crById(m[act].c))return;            // déjà repris par nonPlaces()
+      if(!edtEcrits.has(a.n+'|'+act))edtOublies.push({a,act});
+    });
+  });
+  const edtAtt=nonPlaces().concat(edtOublies);
+  if(edtAtt.length){
+    edtRows.push([]);
+    edtRows.push(["EN ATTENTE DE CRÉNEAU — "+edtAtt.length+" à placer"]);
+    edtAtt.forEach(x=>edtRows.push(['','—','','',actInfo(x.act).label,'','',
+                      x.a.n,x.a.nom,x.a.prenom,x.a.cat,x.a.age,x.a.tel||'','']));
+  }
+  const wsEdt=XLSX.utils.aoa_to_sheet(edtRows);
+  wsEdt['!cols']=[8,10,8,8,14,14,12,4,22,13,9,6,14,17].map(w=>({wch:w}));
+  XLSX.utils.book_append_sheet(wb,wsEdt,"Emploi du temps");
   const wsR=XLSX.utils.aoa_to_sheet(rRows);wsR['!cols']=[18,12,14,12,12,12,14].map(w=>({wch:w}));
   XLSX.utils.book_append_sheet(wb,wsR,"Récapitulatif");
   XLSX.writeFile(wb,`Musique_Desaix_${new Date().toLocaleDateString('fr-FR').replace(/\//g,'-')}.xlsx`);
