@@ -431,7 +431,7 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <div id="login-err" style="color:#c0392b;font-size:13px;min-height:18px;margin-bottom:6px"></div>
     <button onclick="doLogin()" style="width:100%;padding:12px;background:#16264a;color:#fff;border:none;border-radius:9px;font-size:15px;font-weight:600;cursor:pointer">Se connecter</button>
     <div style="text-align:center;margin-top:12px"><button onclick="doReset()" style="background:none;border:none;color:#16264a;text-decoration:underline;cursor:pointer;font-size:13px">Mot de passe oublié ?</button></div>
-    <div style="text-align:center;color:#9aa2ac;font-size:12px;margin-top:14px">Accès réservé aux membres autorisés de la section.</div>
+    <div style="text-align:center;color:#9aa2ac;font-size:12px;margin-top:14px">Accès réservé aux membres autorisés de la section.<br><span id="login-version"></span></div>
   </div>
 </div>
 
@@ -465,7 +465,7 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <div class="nav-section">Archives</div>
     <button class="nav-item" onclick="showPage('archives')">🗂️ &nbsp;Saisons archivées</button>
   </nav>
-  <div class="sidebar-footer">Activité Musique · Desaix<br><span id="footer-saison">v1.0</span></div>
+  <div class="sidebar-footer">Activité Musique · Desaix<br><span id="footer-saison"></span><br><span id="footer-version"></span></div>
 </aside>
 
 <main class="main">
@@ -2949,12 +2949,21 @@ let SAISON=getActiveSaison();
 const SAISON_KEY=`musique_saison_${SAISON.label}`;
 const ARCHIVE_KEY=`musique_archives`;
 
+// Date de version affichée en bas du menu.
+// ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE : c'est ce qui permet
+// aux collègues de vérifier qu'ils ont bien la dernière version.
+const APP_VERSION='15 sept. 2026';
+
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
   const lbl=`Saison ${SAISON.label}`;
   document.querySelectorAll('#saison-label').forEach(el=>el.textContent=lbl);
   const fl=document.getElementById('footer-saison');
-  if(fl)fl.textContent=`v1.0 — ${SAISON.label}`;
+  if(fl)fl.textContent=lbl;
+  const fv=document.getElementById('footer-version');
+  if(fv)fv.textContent=`Version du ${APP_VERSION}`;
+  const lv=document.getElementById('login-version');
+  if(lv)lv.textContent=`Version du ${APP_VERSION}`;
   const rsl=document.getElementById('recap-saison-label');
   if(rsl)rsl.textContent=lbl;
   document.title=`Activité Musique — Desaix ${SAISON.label}`;
