@@ -98,6 +98,7 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .btn-success:disabled { opacity: .45; cursor: not-allowed; }
 .btn-outline { background: transparent; color: var(--text); border-color: var(--border); }
 .btn-outline:hover { background: var(--bg2); }
+.btn-outline:disabled { opacity: .45; cursor: not-allowed; background: transparent; }
 .btn-danger-soft { background: transparent; color: var(--red); border-color: var(--red-light); }
 .btn-danger-soft:hover { background: var(--red-light); }
 .btn-full { width: 100%; justify-content: center; }
@@ -1826,6 +1827,27 @@ function etatPaie(a){return a.paie==='OUI'?'OUI':(a.paie==='PARTIEL'?'PARTIEL':'
 function nbParEtat(k){return k==='TOUS'?adherents.length:adherents.filter(a=>etatPaie(a)===k).length;}
 function listeFiltree(){return filtrePaie==='TOUS'?adherents.slice():adherents.filter(a=>etatPaie(a)===filtrePaie);}
 function setFiltrePaie(k){filtrePaie=k;renderListe();}
+// ─── Ordre de la liste : remonter une fiche ───────────────
+// L'ordre d'affichage est celui du tableau `adherents` lui-même : il est donc
+// enregistré comme le reste (local + cloud) et repris partout où la liste est
+// parcourue — export Excel, mails, suivi des paiements.
+// Avec un filtre actif, « remonter » se lit sur CE QUI EST AFFICHÉ : la fiche
+// passe juste devant la précédente visible. Échanger avec la voisine du tableau
+// donnerait un bouton qui paraît ne rien faire quand cette voisine est masquée.
+function remonterFiche(n){
+  const vue=listeFiltree();
+  const iv=vue.findIndex(a=>a.n===n);
+  if(iv<0)return;
+  if(iv===0){toast('Cette fiche est déjà en haut de la liste');return;}
+  const i=adherents.findIndex(a=>a.n===n);
+  const j=adherents.findIndex(a=>a.n===vue[iv-1].n);
+  if(i<0||j<0)return;
+  const [f]=adherents.splice(i,1);
+  adherents.splice(j,0,f);   // j < i : la position d'insertion reste valable après le retrait
+  saveData();
+  renderListe();
+  toast(`Fiche de ${f.prenom} ${f.nom} remontée`);
+}
 function renderListeFiltres(){
   const z=document.getElementById('liste-filtres');
   if(!z)return;
@@ -1849,8 +1871,10 @@ function renderListe(){
     tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">Aucun inscrit dans « ${f.lib} » — ${adherents.length} fiche(s) au total.<br><button type="button" class="btn btn-outline" style="margin-top:10px" onclick="setFiltrePaie('TOUS')">Afficher tous les inscrits</button></td></tr>`;
     return;
   }
-  tbody.innerHTML=liste.map(a=>{
+  tbody.innerHTML=liste.map((a,i)=>{
     const total=Math.round((a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0));
+    const haut=i===0;   // première ligne AFFICHÉE : rien au-dessus où remonter
+    const btnUp=`<button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" ${haut?'disabled title="Déjà en haut de la liste"':`onclick="remonterFiche(${a.n})" title="Remonter cette fiche d'un rang"`}>↑</button>`;
     const fam=a.foyer?` <span title="Rattaché à un foyer — remise fratrie" style="cursor:help">👨‍👩‍👧</span>`:'';
     return `
     <tr class="row-clic" onclick="editAdherent(${a.n})" title="Cliquez pour rouvrir et corriger cette fiche">
@@ -1861,7 +1885,7 @@ function renderListe(){
       <td style="font-size:12px;color:var(--text2)">${a.email||a.parent||a.tel||'—'}</td>
       <td><span class="badge badge-${a.paie.toLowerCase()}">${a.paie==='OUI'?'Payé ✓':a.paie==='NON'?'En attente':'Partiel'}</span></td>
       <td style="font-weight:500">${total} €</td>
-      <td style="white-space:nowrap" onclick="event.stopPropagation()"><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="editAdherent(${a.n})" title="Modifier la fiche">✏️</button><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px;margin-left:18px" onclick="deleteAdherent(${a.n})" title="Supprimer définitivement cette fiche">🗑️</button></td>
+      <td style="white-space:nowrap" onclick="event.stopPropagation()">${btnUp}<button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="editAdherent(${a.n})" title="Modifier la fiche">✏️</button><button class="btn btn-outline" style="padding:4px 9px;font-size:11px;margin-right:4px" onclick="openRecu(${a.n})" title="Reçu de paiement">🧾</button><button class="btn btn-danger-soft" style="padding:4px 9px;font-size:11px;margin-left:18px" onclick="deleteAdherent(${a.n})" title="Supprimer définitivement cette fiche">🗑️</button></td>
     </tr>`;}).join('');
 }
 // Suppression d'une fiche — sécurisée le 2026-09-05.
@@ -3226,7 +3250,7 @@ const ARCHIVE_KEY=`musique_archives`;
 // Date de version affichée en bas du menu.
 // ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE : c'est ce qui permet
 // aux collègues de vérifier qu'ils ont bien la dernière version.
-const APP_VERSION='15 sept. 2026';
+const APP_VERSION='21 sept. 2026';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
