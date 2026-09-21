@@ -634,6 +634,37 @@ body.editing .page-header h1::after { content: ' ✏️'; }
     <button class="btn btn-outline" onclick="genMails()">🔄 Actualiser</button>
   </div>
 
+  <!-- DATATION GROUPÉE — ajouté le 2026-09-20 -->
+  <div class="card">
+    <div class="card-title">📅 Dater une série de chèques</div>
+    <div class="imp-aide" style="margin-bottom:12px">
+      Un chèque sans date d'encaissement ne déclenche aucun mail : il n'y aurait rien à annoncer
+      à la famille. Posez ici la date de remise en banque d'une série entière — les mails se
+      construisent ensuite tout seuls. <strong>Dater n'est pas encaisser</strong> : le suivi des
+      paiements reste à cocher à la main le jour du dépôt.
+    </div>
+    <div class="g3">
+      <div class="field"><label>Série</label>
+        <select id="dg_serie" onchange="dgApercu()">
+          <option value="T1">1er trimestre — T1</option>
+          <option value="T2">2e trimestre — T2</option>
+          <option value="T3">3e trimestre — T3</option>
+          <option value="ADH">Adhésion</option>
+          <option value="AUTRE">Forfaits &amp; autres libellés</option>
+        </select>
+      </div>
+      <div class="field"><label>Date de remise en banque</label>
+        <input type="date" id="dg_date" onchange="dgApercu()"></div>
+      <div class="field"><label>Chèques déjà datés</label>
+        <select id="dg_ecraser" onchange="dgApercu()">
+          <option value="0">Les laisser tels quels</option>
+          <option value="1">Les redater aussi</option>
+        </select>
+      </div>
+    </div>
+    <div id="dg_apercu"></div>
+  </div>
+
   <div id="mails-stats" class="g4" style="display:none;margin-bottom:14px"></div>
   <div id="mails-list"></div>
   <div id="send-bar" style="display:none;margin-top:10px;display:flex;gap:10px;align-items:center;flex-wrap:wrap">
@@ -1311,7 +1342,7 @@ function showPage(id){
   if(id==='liste')renderListe();
   if(id==='paiements')renderPaiements();
   if(id==='recap-global')renderRecapGlobal();
-  if(id==='mails')genMails();
+  if(id==='mails'){genMails();dgApercu();}
   if(id==='recus')renderRecus();
   if(id==='bordereau')renderBordereau();
   if(id==='garde')renderPagesGarde();
@@ -2734,6 +2765,137 @@ function genMails(){
   });
   renderMails();
 }
+// ═══════════════════════════════════════════════════════════
+// DATATION GROUPÉE — ajouté le 2026-09-20
+// Les mails d'encaissement ne se construisent qu'à partir des chèques portant
+// une date de remise (buildMails les écarte sinon). Les saisir une par une,
+// fiche après fiche, trois fois par an, était le seul chemin : cet écran pose
+// la date sur toute une série d'un coup.
+// Rien n'est écrit sans un aperçu à l'écran puis une confirmation, et l'état
+// précédent est conservé pour permettre une annulation — même logique que
+// l'import de chèques.
+// ═══════════════════════════════════════════════════════════
+
+// Classe un libellé de chèque dans une série. L'ordre compte : « Adhésion T1 »
+// est un chèque de trimestre, pas d'adhésion.
+function dgSerie(libelle){
+  const l=(libelle||'').toString().toUpperCase();
+  if(l.indexOf('T3')>=0)return 'T3';
+  if(l.indexOf('T2')>=0)return 'T2';
+  if(l.indexOf('T1')>=0)return 'T1';
+  if(l.indexOf('ADH')>=0)return 'ADH';
+  return 'AUTRE';
+}
+function dgLabelSerie(code){
+  return{T1:'1er trimestre',T2:'2e trimestre',T3:'3e trimestre',ADH:'adhésion',AUTRE:'forfait / autre'}[code]||code;
+}
+
+// Chèques de la série retenue. `ecraser` décide du sort de ceux déjà datés.
+function dgCibles(){
+  const serie=document.getElementById('dg_serie').value;
+  const ecraser=document.getElementById('dg_ecraser').value==='1';
+  const res=[];
+  adherents.forEach(function(a){
+    if(!Array.isArray(a.cheques))return;
+    a.cheques.forEach(function(c,i){
+      if(dgSerie(c.libelle)!==serie)return;
+      if(!(parseFloat(c.montant)||0))return;          // un chèque sans montant n'a rien à annoncer
+      const deja=(c.dateEncaissement||'').toString().trim();
+      if(deja&&!ecraser)return;
+      res.push({a:a,c:c,i:i,deja:deja});
+    });
+  });
+  return res;
+}
+
+function dgApercu(){
+  const box=document.getElementById('dg_apercu');
+  const serie=document.getElementById('dg_serie').value;
+  const date=document.getElementById('dg_date').value;
+  const cibles=dgCibles();
+  const total=cibles.reduce(function(s,x){return s+(parseFloat(x.c.montant)||0);},0);
+  const nbDeja=cibles.filter(function(x){return x.deja;}).length;
+
+  if(!cibles.length){
+    box.innerHTML='<div class="imp-aide" style="margin-top:12px">Aucun chèque à dater pour le '
+      +esc(dgLabelSerie(serie))+'. Soit la série est déjà entièrement datée, soit aucun chèque ne porte ce libellé.</div>';
+    return;
+  }
+  let h='<div class="imp-bilan" style="margin-top:14px">'
+    +'<div class="imp-kpi"><div class="k">Chèques concernés</div><div class="v">'+cibles.length+'</div></div>'
+    +'<div class="imp-kpi"><div class="k">Montant</div><div class="v">'+Math.round(total).toLocaleString('fr-FR')+' €</div></div>'
+    +'<div class="imp-kpi"><div class="k">Déjà datés</div><div class="v" style="color:'+(nbDeja?'var(--orange)':'var(--navy)')+'">'+nbDeja+'</div></div>'
+    +'</div>';
+  h+='<div class="card" style="padding:0;overflow:hidden;margin-top:10px"><table class="tbl"><thead><tr>'
+    +'<th>Adhérent</th><th>Libellé</th><th>N° chèque</th><th>Banque</th><th class="num" style="text-align:right">Montant</th><th>Date actuelle</th>'
+    +'</tr></thead><tbody>';
+  cibles.forEach(function(x){
+    h+='<tr><td><strong>'+esc(x.a.nom)+'</strong> '+esc(x.a.prenom)+'</td>'
+      +'<td>'+esc(x.c.libelle||'—')+'</td>'
+      +'<td>'+esc(x.c.numero||'—')+'</td>'
+      +'<td>'+esc(x.c.banque||'—')+'</td>'
+      +'<td class="num" style="text-align:right">'+Math.round(parseFloat(x.c.montant)||0).toLocaleString('fr-FR')+' €</td>'
+      +'<td style="font-size:12px">'+(x.deja?'<span style="color:var(--orange)">'+fDate(x.deja)+'</span>':'<span style="color:var(--text3)">aucune</span>')+'</td></tr>';
+  });
+  h+='</tbody></table></div>';
+
+  if(!date){
+    h+='<div class="imp-aide" style="margin-top:10px">Choisissez une date de remise pour activer le bouton.</div>';
+  }else{
+    const d=pDate(date), df=d?diffD(d):9999;
+    if(df<0){
+      h+='<div class="imp-aide" style="margin-top:10px;border-left:3px solid var(--red)">⚠️ Cette date est passée de '
+        +Math.abs(df)+' jour(s). Les familles seraient prévenues après coup : vérifiez avant d\'appliquer.</div>';
+    }else if(df<7){
+      h+='<div class="imp-aide" style="margin-top:10px;border-left:3px solid var(--orange)">⚠️ Remise dans '+df
+        +' jour(s) seulement. Comptez une dizaine de jours pour que chacun puisse approvisionner son compte.</div>';
+    }
+  }
+  h+='<div style="margin-top:12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center">'
+    +'<button class="btn btn-success" onclick="dgAppliquer()"'+(date?'':' disabled')+'>📅 Dater '+cibles.length+' chèque'+(cibles.length>1?'s':'')+'</button>'
+    +'<button class="btn btn-outline" onclick="dgAnnuler()">↩️ Annuler la dernière datation</button>'
+    +'</div>';
+  box.innerHTML=h;
+}
+
+function dgAppliquer(){
+  const serie=document.getElementById('dg_serie').value;
+  const date=document.getElementById('dg_date').value;
+  if(!date){toast('Choisissez d\'abord une date de remise',true);return;}
+  const cibles=dgCibles();
+  if(!cibles.length){toast('Aucun chèque à dater',true);return;}
+  const total=cibles.reduce(function(s,x){return s+(parseFloat(x.c.montant)||0);},0);
+  if(!confirm('Dater '+cibles.length+' chèque(s) du '+dgLabelSerie(serie)+' au '+fDate(date)+' ?\n\n'
+    +'Montant total : '+Math.round(total).toLocaleString('fr-FR')+' €\n\n'
+    +'Le suivi des encaissements n\'est pas modifié : dater un chèque ne le remet pas en banque.\n'
+    +'L\'état actuel est conservé, vous pourrez annuler.'))return;
+  try{
+    localStorage.setItem('musique_datation_undo',JSON.stringify({d:Date.now(),saison:getActiveSaison().label,adherents:adherents}));
+  }catch(e){}
+  cibles.forEach(function(x){ x.c.dateEncaissement=date; });
+  saveData();
+  toast('📅 '+cibles.length+' chèque'+(cibles.length>1?'s':'')+' daté'+(cibles.length>1?'s':'')+' au '+fDate(date));
+  renderAlerts();
+  genMails();
+}
+
+function dgAnnuler(){
+  let sv=null;
+  try{sv=JSON.parse(localStorage.getItem('musique_datation_undo')||'null');}catch(e){}
+  if(!sv||!sv.adherents){toast('Aucune datation à annuler',true);return;}
+  if(sv.saison&&sv.saison!==getActiveSaison().label){
+    toast('La sauvegarde concerne la saison '+sv.saison,true);return;
+  }
+  const q=new Date(sv.d).toLocaleString('fr-FR');
+  if(!confirm('Revenir à l\'état enregistré le '+q+' ?\n\nATTENTION : toute modification faite depuis sera perdue.'))return;
+  adherents=sv.adherents;
+  saveData();
+  localStorage.removeItem('musique_datation_undo');
+  toast('↩️ Datation annulée — état du '+q+' restauré');
+  renderAlerts();
+  genMails();
+}
+
 function renderMails(){
   const zone=document.getElementById('mails-list');
   const statsZ=document.getElementById('mails-stats');
