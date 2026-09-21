@@ -115,18 +115,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
 .badge-non { background: var(--red-light); color: var(--red); }
 .badge-partiel { background: var(--orange-light); color: var(--orange); }
 
-/* FILTRE PAIEMENT (liste) */
-.filtre-bar { display: flex; gap: 7px; flex-wrap: wrap; align-items: center; }
-.f-chip { font-family: inherit; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; padding: 6px 13px; border: 1px solid var(--border); border-radius: 20px; background: var(--card); color: var(--text); cursor: pointer; transition: .15s; }
-.f-chip:hover { background: var(--bg2); }
-.f-chip .f-n { font-weight: 600; font-variant-numeric: tabular-nums; }
-.f-chip.on { font-weight: 600; }
-.f-chip.on.f-tous { background: var(--navy); border-color: var(--navy); color: #fff; }
-.f-chip.on.f-oui { background: var(--green-light); border-color: var(--green); color: var(--green); }
-.f-chip.on.f-partiel { background: var(--orange-light); border-color: var(--orange); color: var(--orange); }
-.f-chip.on.f-non { background: var(--red-light); border-color: var(--red); color: var(--red); }
-.f-note { font-size: 12px; color: var(--text2); }
-
 /* TABLE */
 .tbl { width: 100%; border-collapse: collapse; font-size: 13px; }
 .tbl th { text-align: left; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text2); padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
@@ -223,10 +211,6 @@ body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--t
   .tbl { font-size: 12px; }
   .instr-row { grid-template-columns: 1fr 46px 66px; }
   .instr-row > div:nth-child(4) { display: none; }
-  /* le tableau de la liste élargit la page : on borne la barre de filtre
-     à l'écran pour que les puces passent à la ligne au lieu de sortir à droite */
-  .filtre-bar { max-width: calc(100vw - 54px); }
-  .filtre-bar .f-note:last-child { margin-left: 0 !important; }
 }
 
 /* SCROLLBAR */
@@ -426,8 +410,6 @@ body.editing .page-header h1::after { content: ' ✏️'; }
 .pl-form { display: grid; grid-template-columns: repeat(auto-fit, minmax(148px, 1fr)); gap: 0 12px; }
 .pl-chip { display: inline-flex; align-items: center; gap: 5px; font-size: 12px; padding: 5px 10px; border: 1px solid var(--border); border-radius: 20px; cursor: pointer; user-select: none; background: var(--card); }
 .pl-chip.on { border-color: var(--navy); background: var(--blue-light); color: #0C447C; font-weight: 600; }
-.pl-chip-lien { font-family: inherit; font-size: 12px; color: inherit; background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
-.pl-chip-lien:hover, .pl-chip-lien:focus-visible { color: var(--blue); text-decoration: underline; }
 .pl-alerte { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: #FFF5F5; border: 1px solid var(--red-light); color: #7A0A0A; margin-bottom: 10px; }
 .pl-modal { position: fixed; inset: 0; background: rgba(20,30,50,.5); display: none; align-items: center; justify-content: center; z-index: 1200; padding: 16px; }
 .pl-modal.show { display: flex; }
@@ -493,12 +475,9 @@ body.editing .page-header h1::after { content: ' ✏️'; }
 
 <!-- PAGE INSCRIPTION -->
 <div class="page active" id="page-inscription">
-  <div class="page-header" style="display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap">
-    <div>
-      <h1 id="ins-title">Nouvelle inscription</h1>
-      <p id="ins-sub">Remplissez le formulaire et validez pour ajouter l'adhérent</p>
-    </div>
-    <button type="button" class="btn btn-outline" id="btn-retour-planning" style="display:none;white-space:nowrap" onclick="retourAuPlanning()">← Retour au planning</button>
+  <div class="page-header">
+    <h1 id="ins-title">Nouvelle inscription</h1>
+    <p id="ins-sub">Remplissez le formulaire et validez pour ajouter l'adhérent</p>
   </div>
   <form onsubmit="return false">
   <div class="card">
@@ -612,10 +591,7 @@ body.editing .page-header h1::after { content: ' ✏️'; }
 <div class="page" id="page-liste">
   <div class="page-header" style="display:flex;align-items:center;justify-content:space-between">
     <div><h1>Liste des inscrits</h1><p>Cliquez sur une ligne pour rouvrir et corriger la fiche</p></div>
-    <button class="btn btn-outline" onclick="exportXLSX()" title="Exporte toute la saison, quel que soit le filtre affiché">⬇️ Excel</button>
-  </div>
-  <div class="card" style="padding:11px 13px;margin-bottom:11px">
-    <div class="filtre-bar" id="liste-filtres"></div>
+    <button class="btn btn-outline" onclick="exportXLSX()">⬇️ Excel</button>
   </div>
   <div class="card" style="padding:0;overflow:hidden">
     <table class="tbl" id="tbl-liste">
@@ -1399,7 +1375,6 @@ function repartTrim(annuel){
 let actsForm=[];      // codes des activités cochées dans le formulaire
 let foyerForm=null;   // foyer auquel la fiche est rattachée (fratrie)
 let editingN=null;    // n° de la fiche en cours d'édition — null = nouvelle inscription
-let ficheRetour=null; // page à rouvrir en sortant de la fiche ('planning' quand on vient d'un créneau)
 let fratrieIgnoree=false;
 
 function renderActs(){
@@ -1509,6 +1484,43 @@ function updateTarif(write){
   info.innerHTML=h;
 }
 function estAide(m){return m==='ANCV'||m==='Pass sport'||m==="Pass'Sport";}
+// ─── Chèques fantômes ─────────────────────────────────────
+// Choisir « Chèque » comme mode de paiement ouvre aussitôt une ligne de saisie
+// vierge (addCheque). Laissée telle quelle, elle partait en base : 0 €, sans
+// numéro ni libellé. Deux dégâts : le bordereau de remise affichait des lignes
+// « — » à 0 €, et surtout recuLines() se fonde sur les chèques dès qu'il en
+// existe un, si bien qu'une fiche ne portant que ce fantôme produisait un reçu
+// à 0 € au lieu des montants dus.
+// On ne retire QUE ce qui est entièrement vide : un chèque dont on connaît déjà
+// le numéro ou la banque mais pas encore le montant reste intact.
+function estChequeVide(c){
+  if(!c)return true;
+  if((parseFloat(c.montant)||0)>0)return false;
+  return !['libelle','numero','banque','dateEncaissement'].some(function(k){
+    return (c[k]||'').toString().trim();
+  });
+}
+function sansChequesVides(l){return (l||[]).filter(function(c){return !estChequeVide(c);});}
+
+// Nettoie les fiches déjà enregistrées. Ne sauvegarde que si elle a retiré
+// quelque chose : appelée après chaque synchro, elle ne tourne donc qu'une fois
+// et ne peut pas boucler avec le cloud.
+function purgerChequesVides(silencieux){
+  var n=0;
+  adherents.forEach(function(a){
+    if(!Array.isArray(a.cheques))return;
+    var avant=a.cheques.length;
+    a.cheques=sansChequesVides(a.cheques);
+    n+=avant-a.cheques.length;
+  });
+  if(n){
+    saveData();
+    if(!silencieux)setTimeout(function(){
+      toast('🧹 '+n+' chèque'+(n>1?'s':'')+' vide'+(n>1?'s':'')+' supprimé'+(n>1?'s':'')+' — reçus et bordereau assainis');
+    },600);
+  }
+  return n;
+}
 function toggleChequeBlock(){
   const mode=document.getElementById('f_mode').value;
   const aide=estAide(mode);
@@ -1557,7 +1569,7 @@ function updateChequeTotal(){
 }
 // ─── Remise à blanc du formulaire ──────────────────────────
 function resetForm(){
-  chequesForm=[];actsForm=[];foyerForm=null;editingN=null;fratrieIgnoree=false;ficheRetour=null;
+  chequesForm=[];actsForm=[];foyerForm=null;editingN=null;fratrieIgnoree=false;
   document.querySelectorAll('#page-inscription input:not([readonly]),#page-inscription select,#page-inscription textarea').forEach(el=>{
     if(el.type==='number'&&el.id==='f_adh')el.value='25';
     else if(el.type==='number')el.value='0';
@@ -1579,8 +1591,6 @@ function setFormMode(edit,a){
   document.body.classList.toggle('editing',!!edit);
   const t=document.getElementById('ins-title'),s=document.getElementById('ins-sub');
   const b=document.getElementById('btn-submit'),c=document.getElementById('btn-cancel-edit');
-  const r=document.getElementById('btn-retour-planning');
-  if(r)r.style.display=(edit&&ficheRetour==='planning')?'':'none';
   if(edit){
     t.textContent=`Modifier la fiche n°${a.n}`;
     s.textContent=`${a.prenom} ${a.nom} — corrigez puis enregistrez`;
@@ -1593,7 +1603,7 @@ function setFormMode(edit,a){
     c.style.display='none';
   }
 }
-function cancelEdit(){const r=ficheRetour;resetForm();showPage(r==='planning'?'planning':'liste');toast('Modification annulée');}
+function cancelEdit(){resetForm();showPage('liste');toast('Modification annulée');}
 // Entrée par le menu : on repart toujours d'un formulaire vierge
 function nouvelleInscription(){
   if(editingN!==null&&!confirm('Une fiche est en cours de modification. Abandonner les changements ?')){
@@ -1603,10 +1613,9 @@ function nouvelleInscription(){
 }
 
 // ─── Ouvrir une fiche existante pour correction ────────────
-function editAdherent(n,retour){
+function editAdherent(n){
   const a=adherents.find(x=>x.n===n);
   if(!a){toast('Fiche introuvable',true);return;}
-  ficheRetour=retour||null;
   editingN=n;
   foyerForm=a.foyer||null;
   fratrieIgnoree=!a.foyer;
@@ -1642,14 +1651,6 @@ function editAdherent(n,retour){
   updateTarif(false);   // false = on n'écrase PAS les montants déjà saisis
   showPage('inscription');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(ficheRetour==='planning')toast(`Fiche de ${a.prenom} ${a.nom} — bouton « Retour au planning » en haut de page`);
-}
-// Retour au créneau d'où l'on vient, sans enregistrer.
-function retourAuPlanning(){
-  const enCours=editingN!==null;
-  resetForm();
-  showPage('planning');
-  toast(enCours?'Retour au planning — modifications non enregistrées':'Retour au planning');
 }
 
 // ─── Créer OU enregistrer une fiche ────────────────────────
@@ -1678,7 +1679,7 @@ function addAdherent(){
     t1:parseInt(document.getElementById('f_t1').value)||0,
     t2:parseInt(document.getElementById('f_t2').value)||0,
     t3:parseInt(document.getElementById('f_t3').value)||0,
-    cheques:(mode==='Chèque'||(estAide(mode)&&document.getElementById('f_aide_solde').value==='Chèque'))?chequesForm.map(c=>({libelle:c.libelle,montant:parseFloat(c.montant)||0,numero:c.numero,banque:c.banque,dateEncaissement:c.dateEncaissement})):[],
+    cheques:(mode==='Chèque'||(estAide(mode)&&document.getElementById('f_aide_solde').value==='Chèque'))?sansChequesVides(chequesForm.map(c=>({libelle:c.libelle,montant:parseFloat(c.montant)||0,numero:c.numero,banque:c.banque,dateEncaissement:c.dateEncaissement}))):[],
     aide:estAide(mode)?{type:mode,montant:parseFloat(document.getElementById('f_aide_montant').value)||0,ref:document.getElementById('f_aide_ref').value.trim(),solde:document.getElementById('f_aide_solde').value}:null,
     dispo:document.getElementById('f_dispo').value.trim(),
     obs:document.getElementById('f_obs').value.trim()
@@ -1690,7 +1691,6 @@ function addAdherent(){
     actsForm.forEach(act=>{if(ancienne.creneaux[act])a.creneaux[act]=ancienne.creneaux[act];});
   }
   const foyerTouche=a.foyer;
-  const retour=ficheRetour;   // 'planning' quand la fiche a été ouverte depuis un créneau
   if(edition){
     adherents[adherents.findIndex(x=>x.n===n)]=a;
     // le suivi des encaissements déjà coché n'est JAMAIS réinitialisé
@@ -1698,7 +1698,6 @@ function addAdherent(){
   }else{
     adherents.push(a);
     paiementStatus[n]={t1:a.paie==='OUI',t2:a.paie==='OUI',t3:a.paie==='OUI',adh:a.paie==='OUI'};
-    filtrePaie='TOUS';   // la nouvelle fiche doit être visible en arrivant sur la liste
   }
   saveData();savePS();
   resetForm();
@@ -1707,12 +1706,12 @@ function addAdherent(){
     ?`💾 Fiche de ${prenom} ${nom} mise à jour`
     :`✅ ${prenom} ${nom} inscrit(e) — ${actsLabel(a)}`);
   renderAlerts();
-  showPage(retour==='planning'?'planning':'liste');
+  showPage('liste');
   if(foyerTouche)setTimeout(()=>proposerRecalculFoyer(foyerTouche,n),350);
   if(!edition&&docSettings.autoRecu&&a.cheques&&a.cheques.length){setTimeout(()=>openRecu(a.n),300);}
   // Placement proposé (jamais imposé) — sauf si un reçu s'ouvre déjà par-dessus :
   // l'élève reste alors visible dans « en attente » sur la page Planning.
-  else if(creneaux.length&&actsOf(a).some(act=>{const m=affectOf(a);return !m[act]||!crById(m[act].c);}))setTimeout(()=>proposerPlacement(a.n),450);
+  else if(creneaux.length)setTimeout(()=>proposerPlacement(a.n),450);
 }
 
 // ─── Recalcul du foyer : jamais silencieux ─────────────────
@@ -1742,46 +1741,11 @@ function proposerRecalculFoyer(foyer,exclN){
 }
 
 // ─── LISTE ────────────────────────────────────────────────
-// Filtre d'affichage par état de cotisation. Il ne masque QUE l'affichage :
-// l'export Excel, les mails et les totaux continuent de porter sur toute la saison.
-// Volontairement non mémorisé d'une session à l'autre : une liste amputée au
-// prochain lancement, sans qu'on sache pourquoi, ferait plus de mal que de bien.
-let filtrePaie='TOUS';
-const FILTRES_PAIE=[
-  {k:'TOUS',   cls:'f-tous',   lib:'Tous',       emo:'',    titre:'Afficher tous les inscrits'},
-  {k:'OUI',    cls:'f-oui',    lib:'À jour',     emo:'✓ ', titre:'Cotisation entièrement réglée'},
-  {k:'PARTIEL',cls:'f-partiel',lib:'Partiel',    emo:'½ ', titre:'Une partie seulement a été encaissée'},
-  {k:'NON',    cls:'f-non',    lib:'En attente', emo:'○ ', titre:'Rien n\'a encore été encaissé'}
-];
-// Trois états possibles seulement : tout ce qui n'est ni OUI ni PARTIEL est en attente.
-function etatPaie(a){return a.paie==='OUI'?'OUI':(a.paie==='PARTIEL'?'PARTIEL':'NON');}
-function nbParEtat(k){return k==='TOUS'?adherents.length:adherents.filter(a=>etatPaie(a)===k).length;}
-function listeFiltree(){return filtrePaie==='TOUS'?adherents.slice():adherents.filter(a=>etatPaie(a)===filtrePaie);}
-function setFiltrePaie(k){filtrePaie=k;renderListe();}
-function renderListeFiltres(){
-  const z=document.getElementById('liste-filtres');
-  if(!z)return;
-  const bloc=z.parentElement;
-  if(!adherents.length){if(bloc)bloc.style.display='none';z.innerHTML='';return;}
-  if(bloc)bloc.style.display='';
-  const masques=adherents.length-listeFiltree().length;
-  z.innerHTML='<span class="f-note" style="margin-right:3px">Cotisation :</span>'
-    +FILTRES_PAIE.map(f=>{const n=nbParEtat(f.k);
-      return `<button type="button" class="f-chip ${f.cls}${filtrePaie===f.k?' on':''}" title="${f.titre}" onclick="setFiltrePaie('${f.k}')">${f.emo}${f.lib} <span class="f-n">${n}</span></button>`;}).join('')
-    +(masques?`<span class="f-note" style="margin-left:auto">${masques} fiche${masques>1?'s':''} masquée${masques>1?'s':''} par ce filtre · <button type="button" onclick="setFiltrePaie('TOUS')" style="background:none;border:none;padding:0;color:var(--navy);text-decoration:underline;cursor:pointer;font-size:12px;font-family:inherit">tout afficher</button></span>`:'');
-}
 function renderListe(){
   const tbody=document.getElementById('tbody-liste');
-  renderListeFiltres();
   if(!adherents.length){tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">Aucun inscrit</td></tr>';return;}
   document.getElementById('nb-inscrits').textContent=adherents.length;
-  const liste=listeFiltree();
-  if(!liste.length){
-    const f=FILTRES_PAIE.find(x=>x.k===filtrePaie)||FILTRES_PAIE[0];
-    tbody.innerHTML=`<tr><td colspan="8" style="text-align:center;padding:30px;color:var(--text2)">Aucun inscrit dans « ${f.lib} » — ${adherents.length} fiche(s) au total.<br><button type="button" class="btn btn-outline" style="margin-top:10px" onclick="setFiltrePaie('TOUS')">Afficher tous les inscrits</button></td></tr>`;
-    return;
-  }
-  tbody.innerHTML=liste.map(a=>{
+  tbody.innerHTML=adherents.map(a=>{
     const total=Math.round((a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0));
     const fam=a.foyer?` <span title="Rattaché à un foyer — remise fratrie" style="cursor:help">👨‍👩‍👧</span>`:'';
     return `
@@ -1852,7 +1816,6 @@ function undoDelete(){
   if(adherents.some(x=>x.n===a.n))a.n=adherents.length?Math.max(...adherents.map(x=>x.n))+1:1;
   adherents.push(a);
   if(d.ps)paiementStatus[a.n]=d.ps;
-  filtrePaie='TOUS';   // la fiche restaurée doit réapparaître, quel que soit le filtre
   lastDeleted=null;
   try{localStorage.removeItem('musique_delete_undo');}catch(e){}
   saveData();savePS();
@@ -2348,11 +2311,10 @@ function plDetail(){
     h+=`<div style="padding:9px 0;border-bottom:1px solid var(--border)">
       <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><span class="pl-slot">${titre}</span>${etat}</div>`;
     if(g.occ.length)h+=`<div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
-      +g.occ.map(o=>`<span class="pl-chip"><button type="button" class="pl-chip-lien" title="Ouvrir la fiche de ${esc(o.a.prenom)} ${esc(o.a.nom)}" onclick="editAdherent(${o.a.n},'planning')">${esc(o.a.prenom)} ${esc(o.a.nom)}</button>
-        <span style="cursor:pointer;color:var(--red);font-weight:700" title="Retirer du créneau" onclick="plRetirer(${o.a.n},'${o.act}')">×</span></span>`).join('')+`</div>`;
+      +g.occ.map(o=>`<span class="pl-chip">${esc(o.a.prenom)} ${esc(o.a.nom)}
+        <span style="cursor:pointer;color:var(--red);font-weight:700" title="Retirer" onclick="plRetirer(${o.a.n},'${o.act}')">×</span></span>`).join('')+`</div>`;
     h+='</div>';
   });
-  if(crOccTotal(cr))h+=`<div style="font-size:12px;color:var(--text3);margin-top:9px">Cliquez sur le nom d'un élève pour ouvrir sa fiche · la croix le retire du créneau.</div>`;
   // ajouter un élève dans ce créneau
   const dispo=nonPlaces().filter(x=>crActs(cr).indexOf(x.act)>=0);
   const libres=crGroupes(cr).filter(g=>g.reste>0);
@@ -3027,7 +2989,7 @@ const ARCHIVE_KEY=`musique_archives`;
 // Date de version affichée en bas du menu.
 // ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE : c'est ce qui permet
 // aux collègues de vérifier qu'ils ont bien la dernière version.
-const APP_VERSION='19 sept. 2026';
+const APP_VERSION='15 sept. 2026';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
@@ -4120,6 +4082,7 @@ function startCloudSync(){
         localStorage.setItem('musique_saison_'+SAISON.label+'_ps',JSON.stringify(paiementStatus));
         localStorage.setItem('musique_saison_'+SAISON.label+'_creneaux',JSON.stringify(creneaux));
       }catch(e){}
+      purgerChequesVides();
       cloudReady=true; refreshCurrentView();
     } else {
       cloudReady=true; offerImportLocal();
@@ -4180,6 +4143,7 @@ if(window.FB_OK&&window.fbAuth){
 }else{
   const ov=document.getElementById('login-overlay'); if(ov)ov.style.display='none';
   setTimeout(()=>toast('Mode local : base partagée indisponible (Firebase non chargé)',true),500);
+  purgerChequesVides();
   pgOuvrirDepuisHash(0);
 }
 </script>
