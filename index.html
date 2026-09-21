@@ -429,6 +429,8 @@ body.editing .page-header h1::after { content: ' ✏️'; }
 .pl-chip.on { border-color: var(--navy); background: var(--blue-light); color: #0C447C; font-weight: 600; }
 .pl-chip-lien { font-family: inherit; font-size: 12px; color: inherit; background: none; border: none; padding: 0; cursor: pointer; text-align: left; }
 .pl-chip-lien:hover, .pl-chip-lien:focus-visible { color: var(--blue); text-decoration: underline; }
+.pl-chip-act { font-family: inherit; font-size: 12px; line-height: 1; background: none; border: none; padding: 0 0 0 3px; cursor: pointer; color: var(--navy); }
+.pl-chip-act:hover, .pl-chip-act:focus-visible { color: var(--blue); }
 .pl-alerte { display: flex; gap: 9px; align-items: flex-start; font-size: 13px; padding: 10px 12px; border-radius: 8px; background: #FFF5F5; border: 1px solid var(--red-light); color: #7A0A0A; margin-bottom: 10px; }
 .pl-modal { position: fixed; inset: 0; background: rgba(20,30,50,.5); display: none; align-items: center; justify-content: center; z-index: 1200; padding: 16px; }
 .pl-modal.show { display: flex; }
@@ -499,7 +501,7 @@ body.editing .page-header h1::after { content: ' ✏️'; }
       <h1 id="ins-title">Nouvelle inscription</h1>
       <p id="ins-sub">Remplissez le formulaire et validez pour ajouter l'adhérent</p>
     </div>
-    <button type="button" class="btn btn-outline" id="btn-retour-planning" style="display:none;white-space:nowrap" onclick="retourAuPlanning()">← Retour au planning</button>
+    <button type="button" class="btn btn-outline" id="btn-retour-fiche" style="display:none;white-space:nowrap" onclick="retourFiche()">← Retour</button>
   </div>
   <form onsubmit="return false">
   <div class="card">
@@ -1431,7 +1433,10 @@ function repartTrim(annuel){
 let actsForm=[];      // codes des activités cochées dans le formulaire
 let foyerForm=null;   // foyer auquel la fiche est rattachée (fratrie)
 let editingN=null;    // n° de la fiche en cours d'édition — null = nouvelle inscription
-let ficheRetour=null; // page à rouvrir en sortant de la fiche ('planning' quand on vient d'un créneau)
+let ficheRetour=null; // page à rouvrir en sortant de la fiche — voir RETOURS
+// Pages depuis lesquelles on peut ouvrir une fiche sans passer par la liste.
+// La valeur sert à la fois de cible pour showPage() et de libellé de bouton.
+const RETOURS={'planning':'au planning','recap-global':'au récapitulatif'};
 let fratrieIgnoree=false;
 
 function renderActs(){
@@ -1648,8 +1653,8 @@ function setFormMode(edit,a){
   document.body.classList.toggle('editing',!!edit);
   const t=document.getElementById('ins-title'),s=document.getElementById('ins-sub');
   const b=document.getElementById('btn-submit'),c=document.getElementById('btn-cancel-edit');
-  const r=document.getElementById('btn-retour-planning');
-  if(r)r.style.display=(edit&&ficheRetour==='planning')?'':'none';
+  const r=document.getElementById('btn-retour-fiche'),lib=RETOURS[ficheRetour];
+  if(r){r.style.display=(edit&&lib)?'':'none';if(lib)r.textContent=`← Retour ${lib}`;}
   if(edit){
     t.textContent=`Modifier la fiche n°${a.n}`;
     s.textContent=`${a.prenom} ${a.nom} — corrigez puis enregistrez`;
@@ -1662,7 +1667,7 @@ function setFormMode(edit,a){
     c.style.display='none';
   }
 }
-function cancelEdit(){const r=ficheRetour;resetForm();showPage(r==='planning'?'planning':'liste');toast('Modification annulée');}
+function cancelEdit(){const r=ficheRetour;resetForm();showPage(RETOURS[r]?r:'liste');toast('Modification annulée');}
 // Entrée par le menu : on repart toujours d'un formulaire vierge
 function nouvelleInscription(){
   if(editingN!==null&&!confirm('Une fiche est en cours de modification. Abandonner les changements ?')){
@@ -1711,14 +1716,15 @@ function editAdherent(n,retour){
   updateTarif(false);   // false = on n'écrase PAS les montants déjà saisis
   showPage('inscription');
   window.scrollTo({top:0,behavior:'smooth'});
-  if(ficheRetour==='planning')toast(`Fiche de ${a.prenom} ${a.nom} — bouton « Retour au planning » en haut de page`);
+  const libRetour=RETOURS[ficheRetour];
+  if(libRetour)toast(`Fiche de ${a.prenom} ${a.nom} — bouton « Retour ${libRetour} » en haut de page`);
 }
-// Retour au créneau d'où l'on vient, sans enregistrer.
-function retourAuPlanning(){
-  const enCours=editingN!==null;
+// Retour à la page d'où l'on vient (créneau, récapitulatif), sans enregistrer.
+function retourFiche(){
+  const enCours=editingN!==null,page=ficheRetour,lib=RETOURS[page]||'à la liste';
   resetForm();
-  showPage('planning');
-  toast(enCours?'Retour au planning — modifications non enregistrées':'Retour au planning');
+  showPage(RETOURS[page]?page:'liste');
+  toast(enCours?`Retour ${lib} — modifications non enregistrées`:`Retour ${lib}`);
 }
 
 // ─── Créer OU enregistrer une fiche ────────────────────────
@@ -1776,7 +1782,7 @@ function addAdherent(){
     ?`💾 Fiche de ${prenom} ${nom} mise à jour`
     :`✅ ${prenom} ${nom} inscrit(e) — ${actsLabel(a)}`);
   renderAlerts();
-  showPage(retour==='planning'?'planning':'liste');
+  showPage(RETOURS[retour]?retour:'liste');
   if(foyerTouche)setTimeout(()=>proposerRecalculFoyer(foyerTouche,n),350);
   if(!edition&&docSettings.autoRecu&&a.cheques&&a.cheques.length){setTimeout(()=>openRecu(a.n),300);}
   // Placement proposé (jamais imposé) — sauf si un reçu s'ouvre déjà par-dessus :
@@ -2497,9 +2503,11 @@ function plCarteAttente(){
         <span style="font-size:12px;color:var(--text2)"> · ${par[act].length} élève(s)</span>
         <div style="margin-top:6px;display:flex;flex-wrap:wrap;gap:6px">`
         +par[act].map(a=>{const v=voeuDe(a);
-          return `<button class="pl-chip" onclick="proposerPlacement(${a.n})"${v?` title="${v.herite?`Repris de la fiche de ${esc(v.herite)}`:(v.source==='obs'?'Lu dans les observations':'Disponibilités')} : ${esc(v.txt)}"`:''}>${esc(a.prenom)} ${esc(a.nom)}${v?(v.herite?' 👪':' 🕐'):''}</button>`;}).join('')
+          // Le nom ouvre la fiche (comme dans le détail d'un créneau) ; le 📅 garde
+          // la proposition de place, qui était l'action du chip avant.
+          return `<span class="pl-chip"${v?` title="${v.herite?`Repris de la fiche de ${esc(v.herite)}`:(v.source==='obs'?'Lu dans les observations':'Disponibilités')} : ${esc(v.txt)}"`:''}><button type="button" class="pl-chip-lien" title="Ouvrir la fiche de ${esc(a.prenom)} ${esc(a.nom)}" onclick="editAdherent(${a.n},'planning')">${esc(a.prenom)} ${esc(a.nom)}${v?(v.herite?' 👪':' 🕐'):''}</button><button type="button" class="pl-chip-act" title="Proposer une place à ${esc(a.prenom)} ${esc(a.nom)}" onclick="proposerPlacement(${a.n})">📅</button></span>`;}).join('')
         +`</div></div>`).join('')
-    +`<div style="font-size:12px;color:var(--text3);margin-top:4px">Cliquez sur un nom pour lui proposer une place.</div></div>`;
+    +`<div style="font-size:12px;color:var(--text3);margin-top:4px">Cliquez sur un nom pour ouvrir sa fiche · 📅 pour lui proposer une place.</div></div>`;
 }
 function renderPlanning(){
   plMajBadge();
@@ -2813,6 +2821,52 @@ function plImprimer(){
   openDoc(html);
 }
 
+// ─── RÉCAP : qui est à jour de sa cotisation ──────────────
+// Demandé pour sortir la liste des familles à relancer sans repasser par
+// la liste complète. Un seul état ouvert à la fois, recliquer referme.
+// Volontairement non mémorisé : le récapitulatif s'ouvre sur ses chiffres,
+// pas sur un état sélectionné la veille.
+let recapEtat=null;   // 'OUI' | 'PARTIEL' | 'NON' — null = aucune liste ouverte
+const RECAP_ETATS=[
+  {k:'OUI',    cls:'f-oui',    emo:'✓ ', lib:'À jour',     titre:'Cotisation entièrement réglée'},
+  {k:'PARTIEL',cls:'f-partiel',emo:'½ ', lib:'Partiel',    titre:'Une partie seulement a été encaissée'},
+  {k:'NON',    cls:'f-non',    emo:'○ ', lib:'En attente', titre:"Rien n'a encore été encaissé"}
+];
+function setRecapEtat(k){recapEtat=(recapEtat===k)?null:k;renderRecapGlobal();}
+// Liste des adhérents de l'état ouvert — le bloc reste replié tant qu'on n'a rien choisi.
+function recapBlocEtat(){
+  if(!adherents.length)return '';
+  const chips=RECAP_ETATS.map(e=>{
+    const nb=adherents.filter(a=>etatPaie(a)===e.k).length;
+    return `<button type="button" class="f-chip ${e.cls}${recapEtat===e.k?' on':''}" title="${e.titre}" onclick="setRecapEtat('${e.k}')">${e.emo}${e.lib} <span class="f-n">${nb}</span></button>`;
+  }).join('');
+  let corps;
+  if(!recapEtat){
+    corps='<div style="font-size:12px;color:var(--text3);margin-top:10px">Choisissez un état pour voir les adhérents concernés.</div>';
+  }else{
+    const e=RECAP_ETATS.find(x=>x.k===recapEtat);
+    const sel=adherents.filter(a=>etatPaie(a)===recapEtat);
+    if(!sel.length){
+      corps=`<div style="font-size:13px;color:var(--text2);margin-top:12px">Aucun adhérent dans « ${e.lib} ».</div>`;
+    }else{
+      const somme=sel.reduce((t,a)=>t+(a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0),0);
+      corps=`<div style="overflow:auto;margin-top:12px"><table class="tbl">
+        <thead><tr><th>Nom / Prénom</th><th>Activités</th><th>Contact</th><th style="text-align:right">Total</th></tr></thead>
+        <tbody>`+sel.map(a=>`<tr class="row-clic" onclick="editAdherent(${a.n},'recap-global')" title="Ouvrir la fiche de ${esc(a.prenom)} ${esc(a.nom)}">
+            <td><strong>${esc(a.nom)}</strong><br><span style="font-size:12px;color:var(--text2)">${esc(a.prenom)}</span></td>
+            <td>${actsBadges(a)}</td>
+            <td style="font-size:12px;color:var(--text2)">${esc(a.email||a.parent||a.tel||'—')}</td>
+            <td style="text-align:right;font-weight:500">${Math.round((a.adh||0)+(a.t1||0)+(a.t2||0)+(a.t3||0))} €</td>
+          </tr>`).join('')
+        +`</tbody></table></div>
+        <div style="font-size:12px;color:var(--text3);margin-top:10px">${sel.length} adhérent(s) · ${Math.round(somme).toLocaleString('fr-FR')} € au total — cliquez sur une ligne pour ouvrir la fiche.</div>`;
+    }
+  }
+  return `<div class="card">
+    <div class="card-title">Où en sont les cotisations</div>
+    <div class="filtre-bar">${chips}</div>
+    ${corps}</div>`;
+}
 function renderRecapGlobal(){
   const total=adherents.length,payes=adherents.filter(a=>a.paie==='OUI').length,attente=adherents.filter(a=>a.paie==='NON').length;
   const nbInscriptions=adherents.reduce((s,a)=>s+actsOf(a).length,0);
@@ -2825,6 +2879,7 @@ function renderRecapGlobal(){
       <div class="stat-card"><div class="sv" style="color:var(--red)">${attente}</div><div class="sl">En attente</div></div>
       <div class="stat-card"><div class="sv" style="color:var(--navy);font-size:20px">${Math.round(enc).toLocaleString('fr-FR')} €</div><div class="sl">Total encaissé</div></div>
     </div>
+    ${recapBlocEtat()}
     <div class="card">
       <div class="card-title">Par discipline${nbInscriptions>total?' <span style="text-transform:none;font-weight:400;letter-spacing:0">· montants ventilés au prorata</span>':''}</div>
       <div class="instr-row hdr"><div>Discipline</div><div style="text-align:center">Nb</div><div style="text-align:right">Adhésions</div><div style="text-align:right">Cotisations</div><div style="text-align:right">Total</div></div>
