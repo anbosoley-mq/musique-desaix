@@ -3305,7 +3305,7 @@ const ARCHIVE_KEY=`musique_archives`;
 // Date de version affichée en bas du menu.
 // ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE : c'est ce qui permet
 // aux collègues de vérifier qu'ils ont bien la dernière version.
-const APP_VERSION='21 sept. 2026';
+const APP_VERSION='22 sept. 2026';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
@@ -3614,7 +3614,7 @@ const PIECES_DEF=[
 ].join('\n');
 
 function loadDocSettings(){
-  const def={pieces:PIECES_DEF,pgFinance:true,pgCheques:true,pgNotes:true,pgQr:true,appUrl:'',assoNom:'CSAMM – Section Musique',assoAdresse:'',assoVille:'',assoContact:'',ville:'',compteDepot:'',showLogo:true,autoRecu:true,logoDataUrl:'',signataire:'',signataireRole:'',signatureDataUrl:''};
+  const def={pieces:PIECES_DEF,pgFinance:true,pgCheques:true,pgNotes:true,pgQr:true,appUrl:'',assoNom:'CSAMM – Section Musique',assoAdresse:'',assoVille:'',assoContact:'',ville:'',compteDepot:'',showLogo:true,autoRecu:true,recuEncaisseOnly:false,logoDataUrl:'',signataire:'',signataireRole:'',signatureDataUrl:''};
   try{const d=localStorage.getItem('musique_doc_settings');return d?Object.assign(def,JSON.parse(d)):def;}catch(e){return def;}
 }
 function persistDocSettings(){try{localStorage.setItem('musique_doc_settings',JSON.stringify(docSettings));}catch(e){}}
@@ -3714,11 +3714,29 @@ function removeLogo(){
   toast('Logo retiré');
 }
 
+// Rattache le libellé libre d'un chèque (« T1 », « Adhésions — Célestine, Augustin »…)
+// à l'une des 4 échéances suivies dans Paiements. Renvoie null si le libellé
+// ne permet pas de trancher — dans ce cas recuLines() garde le chèque par prudence.
+function libelleEcheance(libelle){
+  const l=(libelle||'').toLowerCase();
+  if(/adh/.test(l))return 'adh';
+  if(/t\s*1/.test(l))return 't1';
+  if(/t\s*2/.test(l))return 't2';
+  if(/t\s*3/.test(l))return 't3';
+  return null;
+}
+
 // ─── REÇU DE PAIEMENT (un par adhérent) ───
 function recuLines(a){
   const lignes=[];
+  const seulsEncaisses=docSettings.recuEncaisseOnly;
+  const ps=paiementStatus[a.n]||{};
   if(a.cheques && a.cheques.length){
     a.cheques.forEach((c,i)=>{
+      if(seulsEncaisses){
+        const ech=libelleEcheance(c.libelle);
+        if(ech && !ps[ech])return; // échéance pas encore cochée « encaissée » dans Paiements
+      }
       const det=[c.numero?'n° '+c.numero:'', c.banque||'', c.dateEncaissement?'encaissement '+fDate(c.dateEncaissement):''].filter(Boolean).join(' · ');
       lignes.push({label:`Chèque ${i+1}${c.libelle?' — '+c.libelle:''}${det?' ('+det+')':''}`, montant:parseFloat(c.montant)||0});
     });
@@ -3746,6 +3764,10 @@ function openRecu(n){
   html+=`<table class="doc-table"><thead><tr><th>Désignation</th><th class="num">Montant</th></tr></thead><tbody>`;
   lignes.forEach(l=>{ html+=`<tr><td>${esc(l.label)}</td><td class="num">${Math.round(l.montant).toLocaleString('fr-FR')} €</td></tr>`; });
   html+=`</tbody><tfoot><tr><td>Total reçu — Mode : ${esc(a.mode||'—')}</td><td class="num">${Math.round(total).toLocaleString('fr-FR')} €</td></tr></tfoot></table>`;
+  if(docSettings.recuEncaisseOnly && a.cheques && a.cheques.length){
+    const totalRemis=a.cheques.reduce((s,c)=>s+(parseFloat(c.montant)||0),0);
+    if(totalRemis>total){ html+=`<p class="doc-p" style="font-size:13px;color:var(--text2)">Ce reçu ne mentionne que les chèques déjà encaissés. ${Math.round(totalRemis-total).toLocaleString('fr-FR')} € de chèques supplémentaires ont été remis et feront l'objet d'un reçu ultérieur, au fur et à mesure de leur encaissement.</p>`; }
+  }
   if(a.aide && a.aide.montant>0){ html+=`<p class="doc-p" style="font-size:13px">Dont aide déduite : <strong>${esc(a.aide.type)}</strong> — ${Math.round(a.aide.montant).toLocaleString('fr-FR')} €${a.aide.ref?` (réf. ${esc(a.aide.ref)})`:''}${a.aide.solde?` · solde réglé par ${esc(a.aide.solde)}`:''}.</p>`; }
   html+=`<div class="doc-sign"><div class="sign-box">Fait à ${esc(s.ville||'……………')}, le ${fDate(r.date)}</div>${signBox()}</div>`;
   html+=docFooter();
@@ -3764,6 +3786,8 @@ function renderRecus(){
       <div class="field"><label>Options</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding:6px 0"><input type="checkbox" id="ds_logo" ${s.showLogo?'checked':''} onchange="saveDocSettings()" style="width:15px;height:15px;accent-color:var(--navy)"> Afficher le logo sur les documents</label>
         <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer"><input type="checkbox" id="ds_auto" ${s.autoRecu?'checked':''} onchange="saveDocSettings()" style="width:15px;height:15px;accent-color:var(--navy)"> Reçu automatique après inscription</label>
+        <label style="display:flex;align-items:center;gap:8px;font-size:13px;cursor:pointer;padding-top:6px"><input type="checkbox" id="ds_recu_encaisse" ${s.recuEncaisseOnly?'checked':''} onchange="saveDocSettings()" style="width:15px;height:15px;accent-color:var(--navy)"> Sur le reçu, n'afficher que les chèques déjà encaissés</label>
+        <div class="hint">Se base sur les cases cochées dans <em>Paiements</em> (adhésion / T1 / T2 / T3), pas sur la date inscrite sur le chèque. Un libellé de chèque qui ne contient ni « Adh » ni « T1/T2/T3 » reste affiché par prudence, pour ne jamais faire disparaître un montant du reçu.</div>
       </div>
       <div class="field"><label>Logo (reçus, bordereaux &amp; menu)</label>
         <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap">
@@ -4096,6 +4120,7 @@ function saveDocSettings(){
   if(g('ds_lieu'))docSettings.ville=g('ds_lieu').value;
   if(g('ds_logo'))docSettings.showLogo=g('ds_logo').checked;
   if(g('ds_auto'))docSettings.autoRecu=g('ds_auto').checked;
+  if(g('ds_recu_encaisse'))docSettings.recuEncaisseOnly=g('ds_recu_encaisse').checked;
   if(g('ds_compte'))docSettings.compteDepot=g('ds_compte').value;
   if(g('ds_signataire'))docSettings.signataire=g('ds_signataire').value;
   if(g('ds_signrole'))docSettings.signataireRole=g('ds_signrole').value;
