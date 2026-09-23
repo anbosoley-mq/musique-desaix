@@ -1058,6 +1058,10 @@ function loadDismissedAlerts(){
 }
 function saveDismissedAlerts(){
   try{localStorage.setItem('musique_dismissed_alerts',JSON.stringify([...dismissedAlerts]));}catch(e){}
+  // Un encaissement écarté l'est pour la section entière : la mise à l'écart
+  // part dans la saison en ligne, pas seulement dans ce navigateur. Sans
+  // Firebase (mode local), cloudSave() ne fait rien et le stockage local suffit.
+  cloudSave();
 }
 
 // Migration unique : renommage de l'activité CHANT/CHORALE -> CHANT dans les fiches existantes
@@ -3312,9 +3316,11 @@ const SAISON_KEY=`musique_saison_${SAISON.label}`;
 const ARCHIVE_KEY=`musique_archives`;
 
 // Date de version affichée en bas du menu.
-// ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE : c'est ce qui permet
-// aux collègues de vérifier qu'ils ont bien la dernière version.
-const APP_VERSION='22 sept. 2026';
+// ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE — les TROIS ensemble :
+// APP_VERSION (ce qui s'affiche), APP_VERSION_ISO (ce qui se compare)
+// et le fichier version.json déposé à côté de cette page.
+const APP_VERSION='23 sept. 2026';
+const APP_VERSION_ISO='2026-09-23';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
@@ -3644,6 +3650,49 @@ let DEFAULT_LOGO='data:image/jpeg;base64,/9j/4AAQSkZJRgABAQAAAQABAAD/2wBDAAYEBAU
 
 // ─── Helpers ───
 function esc(s){return (s==null?'':''+s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+// ─── CONTRÔLE DE VERSION ──────────────────────────────────
+// L'appli est un fichier unique servi par GitHub Pages. Un navigateur qui le
+// garde en cache continue d'afficher une version périmée pendant que la section
+// travaille sur la nouvelle — c'est arrivé, et personne ne peut le deviner.
+// On interroge donc version.json, minuscule et demandé sans cache, et on
+// propose le rechargement quand la version publiée est POSTÉRIEURE à celle qui
+// tourne. Postérieure seulement : si version.json a été oublié lors d'une mise
+// en ligne, mieux vaut ne rien dire qu'annoncer à tort une nouvelle version.
+let versionBanniere=false,versionDernierTest=0;
+function verifierVersion(force){
+  const now=Date.now();
+  if(versionBanniere)return;
+  if(!force&&now-versionDernierTest<300000)return;   // au plus un test toutes les 5 min
+  versionDernierTest=now;
+  fetch('version.json?t='+now,{cache:'no-store'})
+    .then(r=>r.ok?r.json():null)
+    .then(v=>{
+      if(!v||!v.iso||versionBanniere)return;
+      if(v.iso<=APP_VERSION_ISO)return;
+      versionBanniere=true;
+      banniereVersion(v.version||v.iso);
+    })
+    .catch(()=>{});   // hors ligne, ou fichier ouvert en local : on ne dit rien
+}
+function banniereVersion(publiee){
+  const zone=document.getElementById('alerts-zone');
+  if(!zone)return;
+  const b=document.createElement('div');
+  b.className='alert alert-ok';
+  b.id='alerte-version';
+  b.innerHTML=`<div class="alert-title">🔄 Nouvelle version disponible — ${esc(publiee)}
+    <button class="dismiss-btn" onclick="this.closest('.alert').remove()">Plus tard</button>
+  </div>
+  <div style="font-size:12px">Vous utilisez celle du ${APP_VERSION}. Rien de ce qui est saisi ne sera perdu.
+    <button onclick="rechargerVersion()" style="background:none;border:none;color:var(--green);cursor:pointer;font-size:12px;text-decoration:underline">Recharger maintenant →</button></div>`;
+  zone.prepend(b);
+}
+// Rechargement qui contourne le cache : c'est lui qui retient l'ancienne
+// version, un rechargement ordinaire peut la resservir telle quelle.
+function rechargerVersion(){
+  location.replace(location.pathname+'?maj='+Date.now());
+}
 function pad3(n){return (''+n).padStart(3,'0');}
 function todayISO(){const d=new Date();return d.getFullYear()+'-'+('0'+(d.getMonth()+1)).slice(-2)+'-'+('0'+d.getDate()).slice(-2);}
 function nombreEnLettres(n){
@@ -4427,10 +4476,14 @@ function startCloudSync(){
       adherents=Array.isArray(d.adherents)?d.adherents:[];
       paiementStatus=d.paiementStatus||{};
       creneaux=Array.isArray(d.creneaux)?d.creneaux:[];
+      // Champ absent = saison enregistrée avant le partage des mises à l'écart :
+      // on garde alors celles de cet appareil, la première mise à l'écart les publiera.
+      if(Array.isArray(d.dismissedAlerts))dismissedAlerts=new Set(d.dismissedAlerts);
       try{
         localStorage.setItem('musique_saison_'+SAISON.label+'_adherents',JSON.stringify(adherents));
         localStorage.setItem('musique_saison_'+SAISON.label+'_ps',JSON.stringify(paiementStatus));
         localStorage.setItem('musique_saison_'+SAISON.label+'_creneaux',JSON.stringify(creneaux));
+        localStorage.setItem('musique_dismissed_alerts',JSON.stringify([...dismissedAlerts]));
       }catch(e){}
       purgerChequesVides();
       cloudReady=true; refreshCurrentView();
@@ -4449,7 +4502,7 @@ function startCloudSync(){
 }
 function cloudSave(){
   if(!window.FB_OK||!window.fbAuth||!fbAuth.currentUser)return;
-  seasonRef().set({adherents:adherents,paiementStatus:paiementStatus,creneaux:creneaux,updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email},{merge:true})
+  seasonRef().set({adherents:adherents,paiementStatus:paiementStatus,creneaux:creneaux,dismissedAlerts:[...dismissedAlerts],updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email},{merge:true})
     .catch(e=>{console.error('save',e);toast('Échec sauvegarde cloud',true);});
 }
 function cloudSaveArchives(arch){
@@ -4490,12 +4543,17 @@ if(window.FB_OK&&window.fbAuth){
       if(ov)ov.style.display='flex';
     }
   });
+  verifierVersion(true);
 }else{
   const ov=document.getElementById('login-overlay'); if(ov)ov.style.display='none';
   setTimeout(()=>toast('Mode local : base partagée indisponible (Firebase non chargé)',true),500);
   purgerChequesVides();
   pgOuvrirDepuisHash(0);
+  verifierVersion(true);
 }
+// Rouvrir l'appli après l'avoir laissée de côté est le moment naturel pour
+// s'apercevoir qu'une nouvelle version est sortie.
+document.addEventListener('visibilitychange',function(){if(!document.hidden)verifierVersion();});
 </script>
 </body>
 </html>

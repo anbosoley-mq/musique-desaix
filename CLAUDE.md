@@ -10,6 +10,8 @@ Quatre fichiers, pas de build, pas de dépendances installées :
 - `index.html` — **toute** l'application (HTML, CSS et JavaScript en ligne,
   ~400 Ko). Firebase (auth + Firestore) et SheetJS sont chargés par CDN.
 - `manifest.json`, `icon-192.png`, `icon-512.png` — l'installation en PWA.
+- `version.json` — la version publiée, que l'appli interroge pour signaler
+  d'elle-même qu'un navigateur tourne sur une version périmée.
 
 `main` est publié par GitHub Pages : **ce qui est sur `main` est ce que voient
 les collègues**, après rafraîchissement.
@@ -28,9 +30,23 @@ Si une modification doit malgré tout partir d'un poste, récupérer d'abord
 
 ## À faire à chaque modification publiée
 
-Changer `APP_VERSION` (vers la ligne 3050) pour la date du jour. C'est ce
-que la section lit en bas du menu et sur l'écran de connexion pour vérifier
-qu'elle a bien la dernière version.
+Mettre la date du jour aux **trois** endroits, ensemble :
+
+1. `APP_VERSION` — ce qui s'affiche en bas du menu et sur l'écran de
+   connexion (« Version du 23 sept. 2026 »).
+2. `APP_VERSION_ISO` — la même date en `AAAA-MM-JJ`, c'est elle qui se
+   compare.
+3. `version.json` — les deux champs, `version` et `iso`.
+
+L'appli lit `version.json` au démarrage et à chaque retour au premier plan
+(au plus une fois toutes les cinq minutes), sans cache. Si la date publiée
+est **postérieure** à `APP_VERSION_ISO`, elle affiche un bandeau proposant
+de recharger ; le rechargement ajoute `?maj=<horodatage>` pour contourner
+le cache du navigateur, qui est ce qui retient l'ancienne version.
+
+Oublier `version.json` ne déclenche pas de fausse alerte — la comparaison
+est stricte — mais prive les collègues de l'avertissement. Oublier
+`APP_VERSION_ISO` le déclencherait indéfiniment : ces deux-là vont ensemble.
 
 ## Vérifier une modification
 
@@ -60,6 +76,11 @@ Il n'y a pas de suite de tests. Ce qui marche bien :
   le même contenu dans Firestore ; `saveData()` écrit les deux.
 - Une fiche ouverte depuis une autre page mémorise son retour dans
   `ficheRetour` (voir `RETOURS`).
+- `dismissedAlerts` — les bandeaux d'encaissement écartés, par date
+  d'encaissement affichée. Partagé : il part dans la saison Firestore et
+  revient par le `onSnapshot`, donc écarté une fois = écarté pour toute la
+  section et sur tous les appareils. Le stockage local n'en est plus que le
+  cache hors-ligne, et un champ absent côté cloud ne l'écrase pas.
 
 ## Prudence
 
