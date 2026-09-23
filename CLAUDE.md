@@ -34,8 +34,9 @@ Mettre la date du jour aux **trois** endroits, ensemble :
 
 1. `APP_VERSION` — ce qui s'affiche en bas du menu et sur l'écran de
    connexion (« Version du 23 sept. 2026 »).
-2. `APP_VERSION_ISO` — la même date en `AAAA-MM-JJ`, c'est elle qui se
-   compare.
+2. `APP_VERSION_ISO` — la même date en `AAAA-MM-JJThh:mm` (UTC), c'est
+   elle qui se compare. L'heure compte : deux publications le même jour
+   doivent rester distinguables, sinon la seconde passe inaperçue.
 3. `version.json` — les deux champs, `version` et `iso`.
 
 L'appli lit `version.json` au démarrage et à chaque retour au premier plan
@@ -76,11 +77,19 @@ Il n'y a pas de suite de tests. Ce qui marche bien :
   le même contenu dans Firestore ; `saveData()` écrit les deux.
 - Une fiche ouverte depuis une autre page mémorise son retour dans
   `ficheRetour` (voir `RETOURS`).
-- `dismissedAlerts` — les bandeaux d'encaissement écartés, par date
-  d'encaissement affichée. Partagé : il part dans la saison Firestore et
-  revient par le `onSnapshot`, donc écarté une fois = écarté pour toute la
-  section et sur tous les appareils. Le stockage local n'en est plus que le
-  cache hors-ligne, et un champ absent côté cloud ne l'écrase pas.
+- `dismissedAlerts` (bandeaux d'encaissement écartés, par date affichée) et
+  `mailHistorique` (mails envoyés ou mis en brouillon) sont **partagés** :
+  ils partent dans la saison Firestore et reviennent par le `onSnapshot`.
+  Écarté ou notifié une fois = pour toute la section, sur tous les appareils.
+  Trois règles à ne pas défaire, chacune a sa raison :
+  - la réception **additionne**, elle ne remplace pas (`fusionHistorique`,
+    union des mises à l'écart) — un appareil en retard ne doit pas effacer ce
+    que les autres savent, et « envoyé » l'emporte sur « brouillon » ;
+  - `cloudSave()` n'envoie ces deux champs que si `cloudReady` — avant la
+    première réception, l'appareil en sait moins que le cloud ;
+  - ce que l'appareil est seul à connaître est republié juste après la
+    réception, sinon l'historique d'avant le partage resterait invisible.
+  Le stockage local n'en est plus que le cache hors-ligne.
 
 ## Prudence
 

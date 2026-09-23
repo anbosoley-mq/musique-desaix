@@ -1050,8 +1050,28 @@ function savePS(){
 function loadHistorique(){
   try{const d=localStorage.getItem('musique_histo');return d?JSON.parse(d):[];}catch(e){return[];}
 }
-function saveHistorique(){
+function saveHistoriqueLocal(){
   try{localStorage.setItem('musique_histo',JSON.stringify(mailHistorique));}catch(e){}
+}
+function saveHistorique(){
+  saveHistoriqueLocal();
+  // Un mail parti l'est pour la section entière : sans cela, le bandeau
+  // d'encaissement continue de s'afficher chez les collègues pour un chèque
+  // que quelqu'un a déjà notifié.
+  cloudSave();
+}
+// Fusion de deux historiques : une entrée par identifiant de mail, et
+// « envoyé » l'emporte sur « brouillon ». Rien n'est jamais retiré — un
+// appareil en retard ne doit pas pouvoir effacer ce que les autres savent.
+function fusionHistorique(a,b){
+  const par={},ordre=[];
+  [...(a||[]),...(b||[])].forEach(h=>{
+    if(!h||!h.id)return;
+    const vu=par[h.id];
+    if(!vu){par[h.id]=h;ordre.push(h.id);return;}
+    if(vu.status!=='sent'&&h.status==='sent')par[h.id]=h;
+  });
+  return ordre.map(id=>par[id]);
 }
 function loadDismissedAlerts(){
   try{const d=localStorage.getItem('musique_dismissed_alerts');return d?new Set(JSON.parse(d)):new Set();}catch(e){return new Set();}
@@ -3319,8 +3339,10 @@ const ARCHIVE_KEY=`musique_archives`;
 // ⚠️ À CHANGER À CHAQUE MODIFICATION PUBLIÉE — les TROIS ensemble :
 // APP_VERSION (ce qui s'affiche), APP_VERSION_ISO (ce qui se compare)
 // et le fichier version.json déposé à côté de cette page.
+// L'ISO porte l'heure : deux publications le même jour doivent rester
+// distinguables, sinon la seconde passe inaperçue chez les collègues.
 const APP_VERSION='23 sept. 2026';
-const APP_VERSION_ISO='2026-09-23';
+const APP_VERSION_ISO='2026-09-23T02:04';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
@@ -4476,17 +4498,26 @@ function startCloudSync(){
       adherents=Array.isArray(d.adherents)?d.adherents:[];
       paiementStatus=d.paiementStatus||{};
       creneaux=Array.isArray(d.creneaux)?d.creneaux:[];
-      // Champ absent = saison enregistrée avant le partage des mises à l'écart :
-      // on garde alors celles de cet appareil, la première mise à l'écart les publiera.
-      if(Array.isArray(d.dismissedAlerts))dismissedAlerts=new Set(d.dismissedAlerts);
+      // Mises à l'écart et mails envoyés s'ADDITIONNENT : un appareil qui a
+      // écarté un bandeau hors ligne, ou avant le partage, ne doit pas le voir
+      // revenir parce qu'un autre a enregistré entre-temps. Rien ne se retire.
+      if(Array.isArray(d.dismissedAlerts))dismissedAlerts=new Set([...dismissedAlerts,...d.dismissedAlerts]);
+      if(Array.isArray(d.mailHistorique))mailHistorique=fusionHistorique(mailHistorique,d.mailHistorique);
+      // Ce que cet appareil est seul à savoir doit monter, sinon son historique
+      // d'avant le partage resterait invisible aux autres.
+      const aPublier=dismissedAlerts.size>((d.dismissedAlerts||[]).length)
+                   ||mailHistorique.length>((d.mailHistorique||[]).length);
       try{
         localStorage.setItem('musique_saison_'+SAISON.label+'_adherents',JSON.stringify(adherents));
         localStorage.setItem('musique_saison_'+SAISON.label+'_ps',JSON.stringify(paiementStatus));
         localStorage.setItem('musique_saison_'+SAISON.label+'_creneaux',JSON.stringify(creneaux));
         localStorage.setItem('musique_dismissed_alerts',JSON.stringify([...dismissedAlerts]));
+        localStorage.setItem('musique_histo',JSON.stringify(mailHistorique));
       }catch(e){}
       purgerChequesVides();
-      cloudReady=true; refreshCurrentView();
+      cloudReady=true;
+      if(aPublier)cloudSave();
+      refreshCurrentView();
     } else {
       cloudReady=true; offerImportLocal();
     }
@@ -4502,7 +4533,17 @@ function startCloudSync(){
 }
 function cloudSave(){
   if(!window.FB_OK||!window.fbAuth||!fbAuth.currentUser)return;
-  seasonRef().set({adherents:adherents,paiementStatus:paiementStatus,creneaux:creneaux,dismissedAlerts:[...dismissedAlerts],updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email},{merge:true})
+  const doc={adherents:adherents,paiementStatus:paiementStatus,creneaux:creneaux,
+             updatedAt:Date.now(),updatedBy:fbAuth.currentUser.email};
+  // Mises à l'écart et historique des mails ne partent qu'une fois la saison
+  // reçue du cloud. Un appareil qui n'a pas encore synchronisé écrirait moins
+  // que ce qui s'y trouve et effacerait ce que les autres ont fait ; `merge`
+  // laisse alors l'existant tranquille.
+  if(cloudReady){
+    doc.dismissedAlerts=[...dismissedAlerts];
+    doc.mailHistorique=mailHistorique;
+  }
+  seasonRef().set(doc,{merge:true})
     .catch(e=>{console.error('save',e);toast('Échec sauvegarde cloud',true);});
 }
 function cloudSaveArchives(arch){
