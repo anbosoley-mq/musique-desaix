@@ -1053,6 +1053,12 @@ function loadHistorique(){
 function saveHistorique(){
   try{localStorage.setItem('musique_histo',JSON.stringify(mailHistorique));}catch(e){}
 }
+function loadDismissedAlerts(){
+  try{const d=localStorage.getItem('musique_dismissed_alerts');return d?new Set(JSON.parse(d)):new Set();}catch(e){return new Set();}
+}
+function saveDismissedAlerts(){
+  try{localStorage.setItem('musique_dismissed_alerts',JSON.stringify([...dismissedAlerts]));}catch(e){}
+}
 
 // Migration unique : renommage de l'activité CHANT/CHORALE -> CHANT dans les fiches existantes
 function migrateChantRename(){
@@ -1079,7 +1085,7 @@ let mailHistorique=loadHistorique();
 let chequesForm=[];
 let mailsList=[];
 let openMailCards=new Set();
-let dismissedAlerts=new Set();
+let dismissedAlerts=loadDismissedAlerts();
 let gmailConnected=false;
 
 // init paiement status
@@ -1388,11 +1394,13 @@ function renderAlerts(){
   const groups={};
   adherents.forEach(a=>{
     if(!a.cheques||!a.cheques.length)return;
-    a.cheques.forEach(c=>{
+    a.cheques.forEach((c,ci)=>{
       if(!c.dateEncaissement||!c.montant)return;
       const d=pDate(c.dateEncaissement);if(!d)return;
       const df=diffD(d);
       if(df>horizon||df<-60)return;
+      const mailId=`${a.n}-${ci}-${c.dateEncaissement}`;
+      if(mailHistorique.find(h=>h.id===mailId&&h.status==='sent'))return;
       const key=c.dateEncaissement;
       if(!groups[key])groups[key]={date:d,diff:df,label:fDate(c.dateEncaissement),items:[],total:0};
       groups[key].items.push({a,c});
@@ -1407,7 +1415,7 @@ function renderAlerts(){
     const prefix=g.diff<0?`Retard de ${Math.abs(g.diff)}j —`:g.diff===0?"Aujourd'hui —":`Dans ${g.diff}j —`;
     return`<div class="alert alert-${cls}">
       <div class="alert-title">${icon} Encaissement du ${g.label} · ${prefix} <strong>${Math.round(g.total).toLocaleString('fr-FR')} €</strong>
-        <button class="dismiss-btn" onclick="dismissedAlerts.add('${g.label}');renderAlerts()">Ignorer</button>
+        <button class="dismiss-btn" onclick="dismissedAlerts.add('${g.label}');saveDismissedAlerts();renderAlerts()">Ignorer</button>
       </div>
       ${g.items.slice(0,4).map(({a,c})=>`<div class="alert-item"><span>${a.nom} ${a.prenom} ${c.libelle?'· '+c.libelle:''} ${c.numero?'· N°'+c.numero:''}</span><strong>${Math.round(c.montant)} €</strong></div>`).join('')}
       ${g.items.length>4?`<div style="font-size:11px;opacity:.8">+ ${g.items.length-4} autre(s)…</div>`:''}
