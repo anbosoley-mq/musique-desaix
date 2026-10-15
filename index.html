@@ -1422,6 +1422,8 @@ function renderAlerts(){
     if(!a.cheques||!a.cheques.length)return;
     a.cheques.forEach((c,ci)=>{
       if(!c.dateEncaissement||!c.montant)return;
+      // Chèque déjà encaissé (case cochée dans Paiements) : plus rien à signaler.
+      if((paiementStatus[a.n]||{})[libelleEcheance(c.libelle)]===true)return;
       const d=pDate(c.dateEncaissement);if(!d)return;
       const df=diffD(d);
       if(df>horizon||df<-60)return;
@@ -3343,8 +3345,8 @@ const ARCHIVE_KEY=`musique_archives`;
 // et le fichier version.json déposé à côté de cette page.
 // L'ISO porte l'heure : deux publications le même jour doivent rester
 // distinguables, sinon la seconde passe inaperçue chez les collègues.
-const APP_VERSION='15 oct. 2026';
-const APP_VERSION_ISO='2026-10-15T09:30';
+const APP_VERSION='15 oct. 2026 (2)';
+const APP_VERSION_ISO='2026-10-15T09:45';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
