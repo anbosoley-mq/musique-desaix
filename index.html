@@ -1123,7 +1123,9 @@ const now=new Date();now.setHours(0,0,0,0);
 function pDate(s){if(!s)return null;const d=new Date(s+'T00:00:00');return isNaN(d)?null:d;}
 function fDate(s){const d=pDate(s);if(!d)return'—';return d.toLocaleDateString('fr-FR',{day:'2-digit',month:'long',year:'numeric'});}
 function diffD(d){return d?Math.ceil((d-now)/(1000*60*60*24)):9999;}
-function dateBadge(ds){const d=pDate(ds);if(!d)return'';const df=diffD(d);if(df<0)return`<span class="date-badge db-late">Retard ${Math.abs(df)}j</span>`;if(df<=14)return`<span class="date-badge db-soon">J−${df}</span>`;return`<span class="date-badge db-ok">${fDate(ds)}</span>`;}
+// encaisse=true : la case de l'échéance est cochée dans Paiements — le chèque
+// est réglé, on ne crie plus au retard sur une date simplement dépassée.
+function dateBadge(ds,encaisse){if(encaisse)return`<span class="date-badge db-ok">✓ Encaissé</span>`;const d=pDate(ds);if(!d)return'';const df=diffD(d);if(df<0)return`<span class="date-badge db-late">Retard ${Math.abs(df)}j</span>`;if(df<=14)return`<span class="date-badge db-soon">J−${df}</span>`;return`<span class="date-badge db-ok">${fDate(ds)}</span>`;}
 function sk(s){return({'Desaix':'Desaix','St Joseph':'StJoseph','St Esprit':'StEsprit'})[s]||s.replace(/\s/g,'');}
 function ic(i){return i.startsWith('CHANT')?'CHANT':i;}
 function trimLabel(lib){if(!lib)return'';const l=lib.toUpperCase();if(l.includes('T3'))return'3e trimestre';if(l.includes('T2'))return'2e trimestre';if(l.includes('T1'))return'1er trimestre';if(l.includes('FORFAIT'))return'forfait annuel';return lib;}
@@ -1641,7 +1643,7 @@ function renderCheques(){
   cont.innerHTML=chequesForm.map((c,i)=>`
     <div class="cheque-item">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-        <span style="font-size:12px;font-weight:600;color:var(--text2)">Chèque ${i+1}${c.dateEncaissement?dateBadge(c.dateEncaissement):''}</span>
+        <span style="font-size:12px;font-weight:600;color:var(--text2)">Chèque ${i+1}${c.dateEncaissement?dateBadge(c.dateEncaissement,editingN!==null&&(paiementStatus[editingN]||{})[libelleEcheance(c.libelle)]===true):''}</span>
         <button type="button" class="btn btn-danger-soft" style="padding:3px 10px;font-size:11px" onclick="removeCheque('${c.id}')">✕ Supprimer</button>
       </div>
       <div class="g3" style="margin-bottom:8px">
@@ -2031,7 +2033,7 @@ function renderPaiements(){
               ${c.numero?`<span style="color:var(--text2)">N° ${c.numero}</span>`:''}
               ${c.banque?`<span style="color:var(--text2)">${c.banque}</span>`:''}
               ${c.libelle?`<em style="color:var(--text2)">${c.libelle}</em>`:''}
-              ${c.dateEncaissement?`<span style="margin-left:auto">${dateBadge(c.dateEncaissement)}</span>`:''}
+              ${c.dateEncaissement?`<span style="margin-left:auto">${dateBadge(c.dateEncaissement,ps[libelleEcheance(c.libelle)]===true)}</span>`:''}
             </div>`).join('')}
           </div>`:''}
         </div>`;
@@ -3341,8 +3343,8 @@ const ARCHIVE_KEY=`musique_archives`;
 // et le fichier version.json déposé à côté de cette page.
 // L'ISO porte l'heure : deux publications le même jour doivent rester
 // distinguables, sinon la seconde passe inaperçue chez les collègues.
-const APP_VERSION='23 sept. 2026';
-const APP_VERSION_ISO='2026-09-23T02:04';
+const APP_VERSION='15 oct. 2026';
+const APP_VERSION_ISO='2026-10-15T09:30';
 
 // Met à jour tous les libellés dynamiques
 function updateSaisonLabels(){
