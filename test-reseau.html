@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Test du réseau — Musique</title>
+<link rel="icon" type="image/png" href="icon-192.png">
+<meta name="theme-color" content="#1A3A5C">
+<!--
+  Page autonome, à ouvrir sur le Wi-Fi d'un lieu pour savoir si l'appli
+  (index.html) y fonctionnera. Elle teste un par un les services dont
+  l'appli dépend, avec la même configuration Firebase. Elle n'écrit rien,
+  ne demande aucun identifiant et ne lit aucune donnée de la section.
+  Si la configuration Firebase change dans index.html, la reporter ici.
+-->
+<style>
+:root{
+  --navy:#1A3A5C;--blue:#2E6DA4;--green:#276221;--green-light:#C6EFCE;
+  --red:#9C0006;--red-light:#FFCCCC;--orange:#7B4F00;--orange-light:#FAEEDA;
+  --bg:#F7F8FA;--card:#FFFFFF;--border:#E0E3E9;--text:#1A1F2E;--text2:#5A6275;--text3:#9099AC;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+header{background:var(--navy);color:#fff;padding:18px 16px}
+header h1{margin:0;font-size:20px;font-weight:600}
+header p{margin:4px 0 0;opacity:.8;font-size:13px}
+main{max-width:640px;margin:0 auto;padding:16px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;margin-bottom:14px}
+.intro{font-size:14px;color:var(--text2)}
+.intro b{color:var(--text)}
+label{display:block;font-size:13px;color:var(--text2);margin-bottom:4px}
+input[type=text]{width:100%;padding:9px 10px;border:1px solid var(--border);border-radius:8px;font:inherit}
+button{font:inherit;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+.btn-main{background:var(--navy);color:#fff;font-weight:600;width:100%;margin-top:12px}
+.btn-main:disabled{opacity:.5;cursor:default}
+.btn-soft{background:#EDEEF2;color:var(--text)}
+ul.tests{list-style:none;margin:0;padding:0}
+ul.tests li{display:flex;gap:10px;padding:10px 0;border-top:1px solid var(--border)}
+ul.tests li:first-child{border-top:0}
+.ico{flex:0 0 24px;font-size:18px;text-align:center}
+.t-body{flex:1;min-width:0}
+.t-name{font-weight:600}
+.t-opt{font-weight:400;color:var(--text3);font-size:12px}
+.t-detail{font-size:13px;color:var(--text2);overflow-wrap:anywhere}
+.t-ms{flex:0 0 auto;font-size:12px;color:var(--text3);font-variant-numeric:tabular-nums}
+.verdict{border-radius:10px;padding:14px 16px;margin-bottom:14px;font-size:15px}
+.verdict b{display:block;font-size:16px;margin-bottom:4px}
+.v-ok{background:var(--green-light);color:var(--green)}
+.v-warn{background:var(--orange-light);color:var(--orange)}
+.v-ko{background:var(--red-light);color:var(--red)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.hosts{font-size:13px;color:var(--text2)}
+.hosts code{color:var(--text);font-size:12px}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<header>
+  <h1>📶 Test du réseau</h1>
+  <p>Activité Musique — l'appli fonctionnera-t-elle sur ce Wi-Fi ?</p>
+</header>
+<main>
+  <div class="card intro">
+    <b>Sur place, connecté au Wi-Fi à tester :</b> si le Wi-Fi affiche une page
+    d'accueil (conditions à accepter, code d'accès), passez-la d'abord, puis lancez le test.
+    Il dure moins d'une minute. Rien n'est enregistré, aucun mot de passe n'est demandé.
+    <div style="margin-top:12px">
+      <label for="lieu">Lieu testé</label>
+      <input type="text" id="lieu" placeholder="ex. Ste Anne — Wi-Fi visiteurs" autocomplete="off">
+    </div>
+    <button class="btn-main" id="go">Lancer le test</button>
+  </div>
+
+  <div id="verdict" class="verdict hidden"></div>
+
+  <div class="card">
+    <ul class="tests" id="tests"></ul>
+  </div>
+
+  <div class="card hidden" id="apres">
+    <div class="actions">
+      <button class="btn-soft" id="copier">📋 Copier le résultat</button>
+      <button class="btn-soft" id="refaire">↻ Refaire le test</button>
+    </div>
+    <p class="hosts" style="margin-bottom:0">
+      À transmettre au service informatique si quelque chose est bloqué —
+      l'appli a besoin de joindre en HTTPS :
+      <code>anbosoley-mq.github.io</code>, <code>www.gstatic.com</code>,
+      <code>identitytoolkit.googleapis.com</code>, <code>securetoken.googleapis.com</code>,
+      <code>firestore.googleapis.com</code> (connexions longues incluses) et
+      <code>cdnjs.cloudflare.com</code>.
+    </p>
+  </div>
+</main>
+
+<script>
+// Même configuration que index.html.
+const FIREBASE_CONFIG={
+  apiKey:"AIzaSyD7FyvpXyJ-SzIzIR4dXPydjl4BoFT02fE",
+  authDomain:"csamm-musique-c33f3.firebaseapp.com",
+  projectId:"csamm-musique-c33f3",
+  storageBucket:"csamm-musique-c33f3.firebasestorage.app",
+  messagingSenderId:"452091033579",
+  appId:"1:452091033579:web:b39059a72d35294e280bae"
+};
+const FB_SDK='https://www.gstatic.com/firebasejs/10.12.5/';
+const XLSX_URL='https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js';
+// Document qui n'existe pas : la réponse du serveur (absent ou accès refusé)
+// suffit à prouver qu'il a été joint, sans rien lire de la section.
+const DOC_TEST=['meta','test_reseau'];
+const DELAI=20000;
+
+// critique : sans lui, l'appli ne marche pas normalement.
+const TESTS=[
+  {id:'pages',  nom:'Page de l\'appli (GitHub Pages)', critique:true, run:testPages},
+  {id:'sdk',    nom:'Bibliothèque Firebase', critique:true, run:testSdk},
+  {id:'auth',   nom:'Connexion au compte', critique:true, run:testAuth},
+  {id:'token',  nom:'Maintien de la session', critique:true, run:testToken},
+  {id:'rest',   nom:'Base de données — accès', critique:true, run:testRest},
+  {id:'lecture',nom:'Base de données — lecture', critique:true, run:testLecture},
+  {id:'synchro',nom:'Synchro en temps réel', critique:true, run:()=>testSynchro(false)},
+  {id:'secours',nom:'Synchro — mode de secours', critique:false, run:()=>testSynchro(true)},
+  {id:'excel',  nom:'Export / import Excel', critique:false, run:testExcel},
+];
+
+let resultats={};
+
+function avecDelai(p,ms,msg){
+  return Promise.race([p,new Promise((_,rej)=>setTimeout(()=>rej(new Error(msg||'pas de réponse en '+(ms/1000)+' s')),ms))]);
+}
+function chargerScript(src){
+  return new Promise((res,rej)=>{
+    const s=document.createElement('script');
+    s.src=src;s.onload=res;s.onerror=()=>rej(new Error('téléchargement bloqué'));
+    document.head.appendChild(s);
+  });
+}
+function errMsg(e){
+  if(e instanceof TypeError&&!e.code)return 'bloqué — aucune réponse du serveur';
+  return (e&&(e.code?e.code+' — ':'')+(e.message||e))||'erreur inconnue';
+}
+
+async function testPages(){
+  const r=await avecDelai(fetch('version.json?t='+Date.now(),{cache:'no-store'}),DELAI);
+  if(!r.ok)throw new Error('réponse HTTP '+r.status);
+  const txt=await r.text();
+  let v;try{v=JSON.parse(txt);}catch(e){
+    throw new Error('réponse inattendue — sans doute une page d\'accueil du Wi-Fi à valider');
+  }
+  return 'version publiée : '+(v.version||'?');
+}
+
+async function testSdk(){
+  if(!window.firebase){
+    for(const f of['firebase-app-compat.js','firebase-auth-compat.js','firebase-firestore-compat.js'])
+      await avecDelai(chargerScript(FB_SDK+f),DELAI);
+  }
+  if(!firebase.apps.length)firebase.initializeApp(FIREBASE_CONFIG);
+  return 'chargée depuis www.gstatic.com';
+}
+
+// Les API Google répondent avec CORS : un statut HTTP, même 400, est une
+// vraie réponse de Google ; une exception veut dire que rien n'est revenu.
+async function joindreGoogle(url,body,type){
+  const r=await avecDelai(fetch(url,{method:'POST',headers:{'Content-Type':type},body}),DELAI);
+  let j=null;try{j=await r.json();}catch(e){}
+  if(!j||!j.error&&r.status>=400)throw new Error('réponse inattendue (HTTP '+r.status+') — un filtre du réseau s\'interpose ?');
+  return 'serveur joint (HTTP '+r.status+')';
+}
+function testAuth(){
+  return joindreGoogle('https://identitytoolkit.googleapis.com/v1/accounts:lookup?key='+FIREBASE_CONFIG.apiKey,
+    '{}','application/json');
+}
+function testToken(){
+  return joindreGoogle('https://securetoken.googleapis.com/v1/token?key='+FIREBASE_CONFIG.apiKey,
+    'grant_type=refresh_token&refresh_token=test','application/x-www-form-urlencoded');
+}
+
+async function testRest(){
+  const url='https://firestore.googleapis.com/v1/projects/'+FIREBASE_CONFIG.projectId+
+    '/databases/(default)/documents/'+DOC_TEST.join('/')+'?key='+FIREBASE_CONFIG.apiKey;
+  const r=await avecDelai(fetch(url,{cache:'no-store'}),DELAI);
+  let j=null;try{j=await r.json();}catch(e){}
+  if(!j)throw new Error('réponse inattendue (HTTP '+r.status+') — un filtre du réseau s\'interpose ?');
+  return 'serveur joint (HTTP '+r.status+')';
+}
+
+function reponduParServeur(e){return e&&(e.code==='permission-denied'||e.code==='not-found');}
+
+async function testLecture(){
+  if(!window.firebase||!firebase.apps.length)throw new Error('bibliothèque Firebase absente');
+  try{
+    await avecDelai(firebase.firestore().collection(DOC_TEST[0]).doc(DOC_TEST[1]).get({source:'server'}),DELAI);
+  }catch(e){
+    if(reponduParServeur(e))return 'serveur joint (accès refusé sans connexion : normal)';
+    throw e;
+  }
+  return 'serveur joint';
+}
+
+// La synchro de l'appli (onSnapshot) passe par une connexion qui reste
+// ouverte ; certains pare-feu la coupent. Le mode de secours (long polling)
+// est testé sur une seconde instance pour savoir s'il suffirait de l'activer.
+let dbSecours=null;
+function testSynchro(secours){
+  if(!window.firebase||!firebase.apps.length)return Promise.reject(new Error('bibliothèque Firebase absente'));
+  let db;
+  if(secours){
+    if(!dbSecours){
+      const app=firebase.initializeApp(FIREBASE_CONFIG,'secours');
+      dbSecours=app.firestore();
+      dbSecours.settings({experimentalForceLongPolling:true});
+    }
+    db=dbSecours;
+  }else db=firebase.firestore();
+  let unsub=()=>{};
+  const p=new Promise((res,rej)=>{
+    unsub=db.collection(DOC_TEST[0]).doc(DOC_TEST[1]).onSnapshot({includeMetadataChanges:true},
+      snap=>{if(!snap.metadata.fromCache)res('réception en continu OK');},
+      e=>{if(reponduParServeur(e))res('réception en continu OK (accès refusé sans connexion : normal)');else rej(e);});
+  });
+  return avecDelai(p,DELAI,'aucune réception en '+(DELAI/1000)+' s').finally(()=>unsub());
+}
+
+async function testExcel(){
+  if(!window.XLSX)await avecDelai(chargerScript(XLSX_URL),DELAI);
+  return 'chargé depuis cdnjs.cloudflare.com';
+}
+
+function afficherListe(){
+  document.getElementById('tests').innerHTML=TESTS.map(t=>`
+    <li id="t-${t.id}">
+      <span class="ico">⏳</span>
+      <div class="t-body">
+        <div class="t-name">${t.nom}${t.critique?'':' <span class="t-opt">(non indispensable)</span>'}</div>
+        <div class="t-detail">en attente</div>
+      </div>
+      <span class="t-ms"></span>
+    </li>`).join('');
+}
+function majLigne(t,etat,detail,ms){
+  const li=document.getElementById('t-'+t.id);
+  li.querySelector('.ico').textContent=etat==='ok'?'✅':etat==='ko'?(t.critique?'❌':'⚠️'):'🔄';
+  li.querySelector('.t-detail').textContent=detail;
+  li.querySelector('.t-ms').textContent=ms!=null?(ms<1000?ms+' ms':(ms/1000).toFixed(1)+' s'):'';
+}
+
+function verdict(){
+  const ko=TESTS.filter(t=>resultats[t.id]&&!resultats[t.id].ok);
+  const koCrit=ko.filter(t=>t.critique);
+  const el=document.getElementById('verdict');
+  let cls,titre,txt;
+  if(!ko.length){
+    cls='v-ok';titre='✅ Ce Wi-Fi convient';
+    txt='L\'appli fonctionnera normalement ici : connexion, enregistrement et synchro entre appareils.';
+  }else if(koCrit.length===1&&koCrit[0].id==='synchro'&&resultats.secours&&resultats.secours.ok){
+    cls='v-warn';titre='⚠️ Synchro en temps réel bloquée — mais contournable';
+    txt='Ce réseau coupe les connexions longues qu\'utilise la synchro, et le mode de secours passe. '+
+      'Il suffit d\'activer ce mode dans l\'appli (réglage « long polling » de Firestore) : demandez-le dans une session Claude.';
+  }else if(!koCrit.length){
+    cls='v-warn';titre='⚠️ Ce Wi-Fi convient, avec une réserve';
+    txt=ko.some(t=>t.id==='excel')
+      ?'Tout l\'essentiel passe, sauf l\'export et l\'import Excel, qui ne marcheront pas sur ce réseau.'
+      :'Tout l\'essentiel passe.';
+  }else if(resultats.pages&&!resultats.pages.ok&&/accueil du Wi-Fi/.test(resultats.pages.detail)){
+    cls='v-ko';titre='❌ Le Wi-Fi demande d\'abord une validation';
+    txt='Ouvrez un site quelconque pour faire apparaître la page d\'accueil du Wi-Fi, acceptez-la, puis refaites le test.';
+  }else{
+    cls='v-ko';titre='❌ L\'appli ne fonctionnera pas correctement sur ce Wi-Fi';
+    txt='Bloqué : '+koCrit.map(t=>t.nom.toLowerCase()).join(', ')+'. '+
+      'Les saisies risquent de ne pas être partagées avec le reste du bureau. '+
+      'Utilisez plutôt le partage de connexion d\'un téléphone, ou transmettez la liste ci-dessous au service informatique.';
+  }
+  el.className='verdict '+cls;
+  el.innerHTML=`<b>${titre}</b>${txt}`;
+}
+
+function rapport(){
+  const lieu=document.getElementById('lieu').value.trim()||'(lieu non précisé)';
+  const lignes=TESTS.map(t=>{
+    const r=resultats[t.id];if(!r)return '';
+    return (r.ok?'OK  ':(t.critique?'KO  ':'--  '))+t.nom+' — '+r.detail+' ('+r.ms+' ms)';
+  }).filter(Boolean);
+  const v=document.getElementById('verdict').innerText.replace(/\n+/g,' — ');
+  return ['Test réseau — Activité Musique',
+    'Lieu : '+lieu,
+    'Date : '+new Date().toLocaleString('fr-FR'),
+    'Navigateur : '+navigator.userAgent,
+    '',...lignes,'','Verdict : '+v].join('\n');
+}
+
+async function lancer(){
+  const go=document.getElementById('go');
+  go.disabled=true;go.textContent='Test en cours…';
+  document.getElementById('verdict').classList.add('hidden');
+  document.getElementById('apres').classList.add('hidden');
+  resultats={};
+  afficherListe();
+  for(const t of TESTS){
+    majLigne(t,'run','en cours…');
+    const t0=performance.now();
+    try{
+      const detail=await t.run();
+      resultats[t.id]={ok:true,detail,ms:Math.round(performance.now()-t0)};
+    }catch(e){
+      resultats[t.id]={ok:false,detail:errMsg(e),ms:Math.round(performance.now()-t0)};
+    }
+    const r=resultats[t.id];
+    majLigne(t,r.ok?'ok':'ko',r.detail,r.ms);
+  }
+  verdict();
+  document.getElementById('verdict').classList.remove('hidden');
+  document.getElementById('apres').classList.remove('hidden');
+  go.disabled=false;go.textContent='Lancer le test';
+}
+
+document.getElementById('go').onclick=lancer;
+// Un second passage reprend les bibliothèques déjà chargées : seul le réseau
+// vers les serveurs est retesté. Recharger la page pour tout reprendre.
+document.getElementById('refaire').onclick=lancer;
+document.getElementById('copier').onclick=async()=>{
+  const txt=rapport();const b=document.getElementById('copier');
+  try{await navigator.clipboard.writeText(txt);b.textContent='✓ Copié';}
+  catch(e){window.prompt('Copiez le résultat :',txt);}
+  setTimeout(()=>b.textContent='📋 Copier le résultat',2000);
+};
+afficherListe();
+</script>
+</body>
+</html>
